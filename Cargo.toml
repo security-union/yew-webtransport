@@ -1,9 +1,9 @@
 [package]
 name = "yew-webtransport"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 repository = "https://github.com/security-union/yew-webtransport.git"
-description = "reCAPTCHA is a free service from Google that helps protect websites from spam and abuse"
+description = "WebTransport is an API offering low-latency, bidirectional, client-server messaging."
 license = "MIT"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
