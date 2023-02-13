@@ -1,6 +1,6 @@
 [package]
 name = "yew-webtransport"
-version = "0.1.1"
+version = "0.2.0"
 edition = "2021"
 repository = "https://github.com/security-union/yew-webtransport.git"
 description = "WebTransport is an API offering low-latency, bidirectional, client-server messaging."
@@ -9,3 +9,26 @@ license = "MIT"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+yew = "0.20.0"
+wasm-bindgen-futures = "0.4.34"
+wasm-bindgen = "0.2.84"
+futures = "0.3.24"
+js-sys = { version = "0.3.61", optional = false }
+thiserror = "1.0"
+anyhow = "1"
+serde = "1"
+serde_derive = "1"
+serde_json = "1.0"
+gloo = { version = "0.2.1", optional = false }
+
+
+[dependencies.web-sys]
+version = "0.3.61"
+features = [ "WebSocket", "WebTransport", "WritableStream", "ReadableStream", "WebTransportSendStream"]
+
+[patch.crates-io]
+wasm-bindgen-shared = { path = "../wasm-bindgen/crates/shared" }
+js-sys = { path = "../wasm-bindgen/crates/js-sys" }
+web-sys = { path = "../wasm-bindgen/crates/web-sys" }
+wasm-bindgen-futures = { path = "../wasm-bindgen/crates/futures" }
+wasm-bindgen = { path = "../wasm-bindgen" }
