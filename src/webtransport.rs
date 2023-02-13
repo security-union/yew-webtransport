@@ -24,8 +24,7 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
  */
-
-use anyhow::Error;
+use anyhow::{Error, anyhow};
 use wasm_bindgen_futures::JsFuture;
 use std::fmt;
 use thiserror::Error as ThisError;
@@ -34,8 +33,8 @@ use yew::callback::Callback;
 use gloo::events::EventListener;
 use js_sys::Uint8Array;
 use wasm_bindgen::JsCast;
-use web_sys::{BinaryType, Event, MessageEvent, WebTransport, WebTransportSendStream};
- 
+use web_sys::{BinaryType, Event, MessageEvent, WebTransport, WebTransportSendStream, WritableStream};
+
 /// Represents formatting errors.
 #[derive(Debug, ThisError)]
 pub enum FormatError {
@@ -274,12 +273,14 @@ impl WebTransportTask {
     {
         if let Ok(body) = data.into() {
             wasm_bindgen_futures::spawn_local(async move {
-                let result = async {
-                    let stream = JsFuture::from(self.ws.create_unidirectional_stream()).await?;
-                    let stream: WebTransportSendStream = stream.unchecked_into();
-
+                let result: Result<(), anyhow::Error> = async move {
+                    let stream = JsFuture::from(self.ws.create_unidirectional_stream()).await.map_err(|e| anyhow::anyhow!("e.as_str(sdf)"))?;
+                    let stream: WritableStream = stream.unchecked_into();
+                    let stream = stream.get_writer().map_err(|e| anyhow!("error"))?;
+                    let stream = JsFuture::from(stream.write_with_chunk(&body.into())).await.map_err(|e| anyhow::anyhow!("e.as_str(sdf)"))?;
+                    Ok(())
                 }.await;
-                    if result.is_err() {
+                if result.is_err() {
                     self.notification.emit(WebTransportStatus::Error);
                 }
             });

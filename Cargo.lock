@@ -892,6 +892,7 @@ version = "0.2.0"
 dependencies = [
  "anyhow",
  "futures",
+ "futures-util",
  "gloo 0.2.1",
  "js-sys",
  "serde",
