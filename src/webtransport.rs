@@ -24,16 +24,19 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
  */
-use anyhow::{Error, anyhow};
-use wasm_bindgen_futures::JsFuture;
+use anyhow::{anyhow, Error};
 use std::fmt;
 use thiserror::Error as ThisError;
+use wasm_bindgen_futures::JsFuture;
 use yew::callback::Callback;
 
 use gloo::events::EventListener;
-use js_sys::Uint8Array;
-use wasm_bindgen::JsCast;
-use web_sys::{BinaryType, Event, MessageEvent, WebTransport, WebTransportSendStream, WritableStream};
+use js_sys::{Promise, Uint8Array};
+use wasm_bindgen::{prelude::Closure, JsCast, JsValue};
+use web_sys::{
+    BinaryType, Event, MessageEvent, MouseEvent, WebTransport, WebTransportSendStream,
+    WritableStream,
+};
 
 /// Represents formatting errors.
 #[derive(Debug, ThisError)]
@@ -178,9 +181,9 @@ impl WebTransportService {
         url: &str,
         notification: &Callback<WebTransportStatus>,
     ) -> Result<ConnectCommon, WebTransportError> {
-        let ws = WebTransport::new(url);
+        let transport = WebTransport::new(url);
 
-        let ws = ws.map_err(|ws_error| {
+        let transport = transport.map_err(|ws_error| {
             WebTransportError::CreationError(
                 ws_error
                     .unchecked_into::<js_sys::Error>()
@@ -190,31 +193,28 @@ impl WebTransportService {
             )
         })?;
 
-        ws.set_binary_type(BinaryType::Arraybuffer);
         let notify = notification.clone();
-        let listener_open = move |_: &Event| {
-            notify.emit(WebTransportStatus::Opened);
-        };
+        let ready = transport
+            .ready()
+            .then(&Closure::wrap(Box::new(move |result| {
+                notify.emit(WebTransportStatus::Opened);
+            }) as Box<dyn FnMut(JsValue)>));
+
         let notify = notification.clone();
-        let listener_close = move |_: &Event| {
-            notify.emit(WebTransportStatus::Closed);
-        };
-        let notify = notification.clone();
-        let listener_error = move |_: &Event| {
-            notify.emit(WebTransportStatus::Error);
-        };
+        let closed = transport
+            .closed()
+            .then(&Closure::wrap(Box::new(move |result| {
+                notify.emit(WebTransportStatus::Closed);
+            }) as Box<dyn FnMut(JsValue)>));
+
         {
-            let listeners = [
-                EventListener::new(&ws, "open", listener_open),
-                EventListener::new(&ws, "close", listener_close),
-                EventListener::new(&ws, "error", listener_error),
-            ];
-            Ok(ConnectCommon(ws, listeners))
+            let listeners = [ready, closed];
+            Ok(ConnectCommon(transport, listeners))
         }
     }
 }
 
-struct ConnectCommon(WebTransport, [EventListener; 3]);
+struct ConnectCommon(WebTransport, [Promise; 2]);
 
 fn process_binary<OUT: 'static>(event: &MessageEvent, callback: &Callback<OUT>)
 where
@@ -274,12 +274,17 @@ impl WebTransportTask {
         if let Ok(body) = data.into() {
             wasm_bindgen_futures::spawn_local(async move {
                 let result: Result<(), anyhow::Error> = async move {
-                    let stream = JsFuture::from(self.ws.create_unidirectional_stream()).await.map_err(|e| anyhow::anyhow!("e.as_str(sdf)"))?;
+                    let stream = JsFuture::from(self.ws.create_unidirectional_stream())
+                        .await
+                        .map_err(|e| anyhow::anyhow!("e.as_str(sdf)"))?;
                     let stream: WritableStream = stream.unchecked_into();
                     let stream = stream.get_writer().map_err(|e| anyhow!("error"))?;
-                    let stream = JsFuture::from(stream.write_with_chunk(&body.into())).await.map_err(|e| anyhow::anyhow!("e.as_str(sdf)"))?;
+                    let stream = JsFuture::from(stream.write_with_chunk(&body.into()))
+                        .await
+                        .map_err(|e| anyhow::anyhow!("e.as_str(sdf)"))?;
                     Ok(())
-                }.await;
+                }
+                .await;
                 if result.is_err() {
                     self.notification.emit(WebTransportStatus::Error);
                 }
