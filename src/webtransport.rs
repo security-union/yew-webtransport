@@ -86,7 +86,7 @@ pub enum WebTransportError {
 /// A handle to control the WebTransport connection. Implements `Task` and could be canceled.
 #[must_use = "the connection will be closed when the task is dropped"]
 pub struct WebTransportTask {
-    ws: WebTransport,
+    transport: WebTransport,
     notification: Callback<WebTransportStatus>,
     #[allow(dead_code)]
     listeners: [EventListener; 4],
@@ -94,14 +94,14 @@ pub struct WebTransportTask {
 
 impl WebTransportTask {
     fn new(
-        ws: WebTransport,
+        transport: WebTransport,
         notification: Callback<WebTransportStatus>,
         listener_0: EventListener,
         listeners: [EventListener; 3],
     ) -> WebTransportTask {
         let [listener_1, listener_2, listener_3] = listeners;
         WebTransportTask {
-            ws,
+            transport,
             notification,
             listeners: [listener_0, listener_1, listener_2, listener_3],
         }
@@ -129,12 +129,14 @@ impl WebTransportService {
     where
         OUT: From<Text> + From<Binary>,
     {
-        let ConnectCommon(ws, listeners) = Self::connect_common(url, &notification)?;
-        let listener = EventListener::new(&ws, "message", move |event: &Event| {
+        let ConnectCommon(transport, listeners) = Self::connect_common(url, &notification)?;
+        let incoming_uni = transport.incoming_unidirectional_streams();
+        // TODO: Pull streams from incoming_uni and process them.
+        let listener = EventListener::new(&transport, "message", move |event: &Event| {
             let event = event.dyn_ref::<MessageEvent>().unwrap();
             process_both(&event, &callback);
         });
-        Ok(WebTransportTask::new(ws, notification, listener, listeners))
+        Ok(WebTransportTask::new(transport, notification, listener, listeners))
     }
 
     /// Connects to a server through a WebTransport connection, like connect,
@@ -274,7 +276,7 @@ impl WebTransportTask {
         if let Ok(body) = data.into() {
             wasm_bindgen_futures::spawn_local(async move {
                 let result: Result<(), anyhow::Error> = async move {
-                    let stream = JsFuture::from(self.ws.create_unidirectional_stream())
+                    let stream = JsFuture::from(self.transport.create_unidirectional_stream())
                         .await
                         .map_err(|e| anyhow::anyhow!("e.as_str(sdf)"))?;
                     let stream: WritableStream = stream.unchecked_into();
@@ -298,7 +300,7 @@ impl WebTransportTask {
         IN: Into<Binary>,
     {
         if let Ok(body) = data.into() {
-            let result = self.ws.send_with_u8_array(&body);
+            let result = self.transport.send_with_u8_array(&body);
 
             if result.is_err() {
                 self.notification.emit(WebTransportStatus::Error);
@@ -310,7 +312,7 @@ impl WebTransportTask {
 impl WebTransportTask {
     fn is_active(&self) -> bool {
         matches!(
-            self.ws.ready_state(),
+            self.transport.ready_state(),
             WebTransport::CONNECTING | WebTransport::OPEN
         )
     }
@@ -319,7 +321,7 @@ impl WebTransportTask {
 impl Drop for WebTransportTask {
     fn drop(&mut self) {
         if self.is_active() {
-            self.ws.close().ok();
+            self.transport.close().ok();
         }
     }
 }
