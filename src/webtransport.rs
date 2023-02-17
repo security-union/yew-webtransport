@@ -86,7 +86,7 @@ pub enum WebTransportError {
 /// A handle to control the WebTransport connection. Implements `Task` and could be canceled.
 #[must_use = "the connection will be closed when the task is dropped"]
 pub struct WebTransportTask {
-    transport: WebTransport,
+    pub transport: Rc<WebTransport>,
     notification: Callback<WebTransportStatus>,
     #[allow(dead_code)]
     listeners: [Promise; 2],
@@ -94,7 +94,7 @@ pub struct WebTransportTask {
 
 impl WebTransportTask {
     fn new(
-        transport: WebTransport,
+        transport: Rc<WebTransport>,
         notification: Callback<WebTransportStatus>,
         listeners: [Promise; 2],
     ) -> WebTransportTask {
@@ -155,7 +155,7 @@ impl WebTransportService {
             }
         });
 
-        Ok(WebTransportTask::new(transport, notification, listeners))
+        Ok(WebTransportTask::new(transport.into(), notification, listeners))
     }
 
     fn connect_common(
@@ -208,7 +208,7 @@ where
 
 impl WebTransportTask {
     /// Sends data to a WebTransport connection.
-    pub fn send<IN>(transport: Rc<WebTransport>, data: IN)
+    pub fn send_binary<IN>(transport: Rc<WebTransport>, data: IN)
     where
         IN: Into<Text>,
     {
@@ -235,28 +235,6 @@ impl WebTransportTask {
         }
     }
 
-    /// Sends binary data to a WebTransport connection.
-    pub fn send_binary<IN>(self, data: IN)
-    where
-        IN: Into<Binary>,
-    {
-        if let Ok(body) = data.into() {
-            wasm_bindgen_futures::spawn_local(async move {
-                let stream: WritableStream =
-                    JsFuture::from(self.transport.create_unidirectional_stream())
-                        .await
-                        .unwrap()
-                        .unchecked_into();
-                let writer = stream.get_writer().unwrap();
-                let body = Uint8Array::from(body.as_slice());
-                let result = JsFuture::from(writer.write_with_chunk(&body)).await;
-                let result = JsFuture::from(writer.close()).await;
-                if result.is_err() {
-                    self.notification.emit(WebTransportStatus::Error);
-                }
-            });
-        }
-    }
 }
 
 impl WebTransportTask {

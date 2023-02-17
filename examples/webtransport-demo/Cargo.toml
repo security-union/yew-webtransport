@@ -12,3 +12,14 @@ serde = "1"
 serde_derive = "1"
 serde_json = "1.0"
 yew-webtransport = { path = "../../"}
+
+[dependencies.web-sys]
+version = "0.3.61"
+features = [ "WebSocket", "WebTransport", "WritableStream", "ReadableStream", "ReadableStreamDefaultReader", "ReadableStreamReadResult", "WebTransportSendStream", "WritableStreamDefaultWriter"]
+
+[patch.crates-io]
+wasm-bindgen-shared = { path = "../../../wasm-bindgen/crates/shared" }
+js-sys = { path = "../../../wasm-bindgen/crates/js-sys" }
+web-sys = { path = "../../../wasm-bindgen/crates/web-sys" }
+wasm-bindgen-futures = { path = "../../../wasm-bindgen/crates/futures" }
+wasm-bindgen = { path = "../../../wasm-bindgen" }

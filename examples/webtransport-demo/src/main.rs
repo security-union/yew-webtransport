@@ -45,7 +45,7 @@ pub struct WsResponse {
 pub struct Model {
     pub fetching: bool,
     pub data: Option<u32>,
-    pub ws: Option<WebTransportTask>,
+    pub transport: Option<WebTransportTask>,
 }
 
 impl Model {
@@ -70,7 +70,7 @@ impl Component for Model {
         Self {
             fetching: false,
             data: None,
-            ws: None,
+            transport: None,
         }
     }
 
@@ -91,24 +91,23 @@ impl Component for Model {
                         notification,
                     )
                     .unwrap();
-                    self.ws = Some(task);
+                    self.transport = Some(task);
                     true
                 }
                 WsAction::SendData(binary) => {
                     let request = WsRequest { value: 321 };
-                    if binary {
-                        self.ws.as_mut().unwrap().send_binary(Json(&request));
-                    } else {
-                        self.ws.as_mut().unwrap().send(Json(&request));
-                    }
+                    if let Some(transport) = self.transport.as_ref() {
+                        WebTransportTask::send_binary(transport.transport.clone(), Json(&request));
+                    };
+
                     false
                 }
                 WsAction::Disconnect => {
-                    self.ws.take();
+                    self.transport.take();
                     true
                 }
                 WsAction::Lost => {
-                    self.ws = None;
+                    self.transport = None;
                     true
                 }
             },
@@ -124,19 +123,19 @@ impl Component for Model {
             <div>
                 <nav class="menu">
                     { self.view_data() }
-                    <button disabled={self.ws.is_some()}
+                    <button disabled={self.transport.is_some()}
                             onclick={ctx.link().callback(|_| WsAction::Connect)}>
                         { "Connect To WebTransport" }
                     </button>
-                    <button disabled={self.ws.is_none()}
+                    <button disabled={self.transport.is_none()}
                             onclick={ctx.link().callback(|_| WsAction::SendData(false))}>
                         { "Send To WebTransport" }
                     </button>
-                    <button disabled={self.ws.is_none()}
+                    <button disabled={self.transport.is_none()}
                             onclick={ctx.link().callback(|_| WsAction::SendData(true))}>
                         { "Send To WebTransport [binary]" }
                     </button>
-                    <button disabled={self.ws.is_none()}
+                    <button disabled={self.transport.is_none()}
                             onclick={ctx.link().callback(|_| WsAction::Disconnect)}>
                         { "Close WebTransport connection" }
                     </button>
