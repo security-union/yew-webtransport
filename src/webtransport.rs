@@ -25,7 +25,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
  */
 use anyhow::{anyhow, Error};
-use std::fmt;
+use std::{fmt, rc::Rc};
 use thiserror::Error as ThisError;
 use wasm_bindgen_futures::JsFuture;
 use yew::callback::Callback;
@@ -101,7 +101,7 @@ impl WebTransportTask {
         WebTransportTask {
             transport,
             notification,
-            listeners
+            listeners,
         }
     }
 }
@@ -155,11 +155,7 @@ impl WebTransportService {
             }
         });
 
-        Ok(WebTransportTask::new(
-            transport,
-            notification,
-            listeners,
-        ))
+        Ok(WebTransportTask::new(transport, notification, listeners))
     }
 
     fn connect_common(
@@ -212,14 +208,16 @@ where
 
 impl WebTransportTask {
     /// Sends data to a WebTransport connection.
-    pub fn send<IN>(&mut self, data: IN)
+    pub fn send<IN>(transport: Rc<WebTransport>, data: IN)
     where
         IN: Into<Text>,
     {
+        let transport = transport.clone();
         if let Ok(body) = data.into() {
             wasm_bindgen_futures::spawn_local(async move {
+                let transport = transport.clone();
                 let result: Result<(), anyhow::Error> = async move {
-                    let stream = JsFuture::from(self.transport.create_unidirectional_stream())
+                    let stream = JsFuture::from(transport.create_unidirectional_stream())
                         .await
                         .map_err(|e| anyhow::anyhow!("e.as_str(sdf)"))?;
                     let stream: WritableStream = stream.unchecked_into();
@@ -231,23 +229,32 @@ impl WebTransportTask {
                 }
                 .await;
                 if result.is_err() {
-                    self.notification.emit(WebTransportStatus::Error);
+                    // self.notification.emit(WebTransportStatus::Error);
                 }
             });
         }
     }
 
     /// Sends binary data to a WebTransport connection.
-    pub fn send_binary<IN>(&mut self, data: IN)
+    pub fn send_binary<IN>(self, data: IN)
     where
         IN: Into<Binary>,
     {
         if let Ok(body) = data.into() {
-            let result = self.transport.send_with_u8_array(&body);
-
-            if result.is_err() {
-                self.notification.emit(WebTransportStatus::Error);
-            }
+            wasm_bindgen_futures::spawn_local(async move {
+                let stream: WritableStream =
+                    JsFuture::from(self.transport.create_unidirectional_stream())
+                        .await
+                        .unwrap()
+                        .unchecked_into();
+                let writer = stream.get_writer().unwrap();
+                let body = Uint8Array::from(body.as_slice());
+                let result = JsFuture::from(writer.write_with_chunk(&body)).await;
+                let result = JsFuture::from(writer.close()).await;
+                if result.is_err() {
+                    self.notification.emit(WebTransportStatus::Error);
+                }
+            });
         }
     }
 }
