@@ -25,7 +25,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
  */
 use anyhow::{anyhow, Error};
-use futures_util::__private::async_await;
 use std::fmt;
 use thiserror::Error as ThisError;
 use wasm_bindgen_futures::JsFuture;
@@ -90,21 +89,19 @@ pub struct WebTransportTask {
     transport: WebTransport,
     notification: Callback<WebTransportStatus>,
     #[allow(dead_code)]
-    listeners: [EventListener; 4],
+    listeners: [Promise; 2],
 }
 
 impl WebTransportTask {
     fn new(
         transport: WebTransport,
         notification: Callback<WebTransportStatus>,
-        listener_0: EventListener,
-        listeners: [EventListener; 3],
+        listeners: [Promise; 2],
     ) -> WebTransportTask {
-        let [listener_1, listener_2, listener_3] = listeners;
         WebTransportTask {
             transport,
             notification,
-            listeners: [listener_0, listener_1, listener_2, listener_3],
+            listeners
         }
     }
 }
@@ -158,37 +155,11 @@ impl WebTransportService {
             }
         });
 
-        // TODO: Pull streams from incoming_uni and process them.
-        let listener = EventListener::new(&transport, "message", move |event: &Event| {
-            let event = event.dyn_ref::<MessageEvent>().unwrap();
-            process_both(&event, &callback);
-        });
         Ok(WebTransportTask::new(
             transport,
             notification,
-            listener,
             listeners,
         ))
-    }
-
-    /// Connects to a server through a WebTransport connection, like connect,
-    /// but only processes binary frames. Text frames are silently
-    /// ignored. Needs two functions to generate data and notification
-    /// messages.
-    pub fn connect_binary<OUT: 'static>(
-        url: &str,
-        callback: Callback<OUT>,
-        notification: Callback<WebTransportStatus>,
-    ) -> Result<WebTransportTask, WebTransportError>
-    where
-        OUT: From<Binary>,
-    {
-        let ConnectCommon(ws, listeners) = Self::connect_common(url, &notification)?;
-        let listener = EventListener::new(&ws, "message", move |event: &Event| {
-            let event = event.dyn_ref::<MessageEvent>().unwrap();
-            process_binary(&event, &callback);
-        });
-        Ok(WebTransportTask::new(ws, notification, listener, listeners))
     }
 
     fn connect_common(
@@ -283,10 +254,7 @@ impl WebTransportTask {
 
 impl WebTransportTask {
     fn is_active(&self) -> bool {
-        matches!(
-            self.transport.ready_state(),
-            WebTransport::CONNECTING | WebTransport::OPEN
-        )
+        false
     }
 }
 
