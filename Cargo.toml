@@ -25,7 +25,7 @@ gloo = { version = "0.2.1", optional = false }
 
 [dependencies.web-sys]
 version = "0.3.61"
-features = [ "WebSocket", "WebTransport", "WritableStream", "ReadableStream", "WebTransportSendStream", "WritableStreamDefaultWriter"]
+features = [ "WebSocket", "WebTransport", "WritableStream", "ReadableStream", "ReadableStreamDefaultReader", "ReadableStreamReadResult", "WebTransportSendStream", "WritableStreamDefaultWriter"]
 
 [patch.crates-io]
 wasm-bindgen-shared = { path = "../wasm-bindgen/crates/shared" }

@@ -25,17 +25,18 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
  */
 use anyhow::{anyhow, Error};
+use futures_util::__private::async_await;
 use std::fmt;
 use thiserror::Error as ThisError;
 use wasm_bindgen_futures::JsFuture;
 use yew::callback::Callback;
 
 use gloo::events::EventListener;
-use js_sys::{Promise, Uint8Array};
+use js_sys::{Boolean, JsString, Promise, Reflect, Uint8Array};
 use wasm_bindgen::{prelude::Closure, JsCast, JsValue};
 use web_sys::{
-    BinaryType, Event, MessageEvent, MouseEvent, WebTransport, WebTransportSendStream,
-    WritableStream,
+    console::log, BinaryType, Event, MessageEvent, MouseEvent, ReadableStreamDefaultReader,
+    ReadableStreamReadResult, WebTransport, WebTransportSendStream, WritableStream,
 };
 
 /// Represents formatting errors.
@@ -131,12 +132,43 @@ impl WebTransportService {
     {
         let ConnectCommon(transport, listeners) = Self::connect_common(url, &notification)?;
         let incoming_uni = transport.incoming_unidirectional_streams();
+        let incoming_uni: ReadableStreamDefaultReader = incoming_uni.get_reader().unchecked_into();
+        wasm_bindgen_futures::spawn_local(async move {
+            loop {
+                let read_result = JsFuture::from(incoming_uni.read()).await;
+                match read_result {
+                    Err(e) => {
+                        // log!("Error reading from incoming_uni: {:?}", e);
+                        break;
+                    }
+                    Ok(result) => {
+                        let done = Reflect::get(&result, &JsString::from("done"))
+                            .unwrap()
+                            .unchecked_into::<Boolean>();
+                        if done.is_truthy() {
+                            // log::info!("Done reading from incoming_uni");
+                            break;
+                        }
+                        let value: Uint8Array = Reflect::get(&result, &JsString::from("value"))
+                            .unwrap()
+                            .unchecked_into();
+                        process_binary(&value, &callback);
+                    }
+                }
+            }
+        });
+
         // TODO: Pull streams from incoming_uni and process them.
         let listener = EventListener::new(&transport, "message", move |event: &Event| {
             let event = event.dyn_ref::<MessageEvent>().unwrap();
             process_both(&event, &callback);
         });
-        Ok(WebTransportTask::new(transport, notification, listener, listeners))
+        Ok(WebTransportTask::new(
+            transport,
+            notification,
+            listener,
+            listeners,
+        ))
     }
 
     /// Connects to a server through a WebTransport connection, like connect,
@@ -155,26 +187,6 @@ impl WebTransportService {
         let listener = EventListener::new(&ws, "message", move |event: &Event| {
             let event = event.dyn_ref::<MessageEvent>().unwrap();
             process_binary(&event, &callback);
-        });
-        Ok(WebTransportTask::new(ws, notification, listener, listeners))
-    }
-
-    /// Connects to a server through a WebTransport connection, like connect,
-    /// but only processes text frames. Binary frames are silently
-    /// ignored. Needs two functions to generate data and notification
-    /// messages.
-    pub fn connect_text<OUT: 'static>(
-        url: &str,
-        callback: Callback<OUT>,
-        notification: Callback<WebTransportStatus>,
-    ) -> Result<WebTransportTask, WebTransportError>
-    where
-        OUT: From<Text>,
-    {
-        let ConnectCommon(ws, listeners) = Self::connect_common(url, &notification)?;
-        let listener = EventListener::new(&ws, "message", move |event: &Event| {
-            let event = event.dyn_ref::<MessageEvent>().unwrap();
-            process_text(&event, &callback);
         });
         Ok(WebTransportTask::new(ws, notification, listener, listeners))
     }
@@ -218,53 +230,13 @@ impl WebTransportService {
 
 struct ConnectCommon(WebTransport, [Promise; 2]);
 
-fn process_binary<OUT: 'static>(event: &MessageEvent, callback: &Callback<OUT>)
+fn process_binary<OUT: 'static>(bytes: &Uint8Array, callback: &Callback<OUT>)
 where
     OUT: From<Binary>,
 {
-    let bytes = if !event.data().is_string() {
-        Some(event.data())
-    } else {
-        None
-    };
-
-    let data = if let Some(bytes) = bytes {
-        let bytes: Vec<u8> = Uint8Array::new(&bytes).to_vec();
-        Ok(bytes)
-    } else {
-        Err(FormatError::ReceivedTextForBinary.into())
-    };
-
+    let data = Ok(bytes.to_vec());
     let out = OUT::from(data);
     callback.emit(out);
-}
-
-fn process_text<OUT: 'static>(event: &MessageEvent, callback: &Callback<OUT>)
-where
-    OUT: From<Text>,
-{
-    let text = event.data().as_string();
-
-    let data = if let Some(text) = text {
-        Ok(text)
-    } else {
-        Err(FormatError::ReceivedBinaryForText.into())
-    };
-
-    let out = OUT::from(data);
-    callback.emit(out);
-}
-
-fn process_both<OUT: 'static>(event: &MessageEvent, callback: &Callback<OUT>)
-where
-    OUT: From<Text> + From<Binary>,
-{
-    let is_text = event.data().is_string();
-    if is_text {
-        process_text(event, callback);
-    } else {
-        process_binary(event, callback);
-    }
 }
 
 impl WebTransportTask {
@@ -321,7 +293,7 @@ impl WebTransportTask {
 impl Drop for WebTransportTask {
     fn drop(&mut self) {
         if self.is_active() {
-            self.transport.close().ok();
+            self.transport.close();
         }
     }
 }
