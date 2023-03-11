@@ -155,7 +155,11 @@ impl WebTransportService {
             }
         });
 
-        Ok(WebTransportTask::new(transport.into(), notification, listeners))
+        Ok(WebTransportTask::new(
+            transport.into(),
+            notification,
+            listeners,
+        ))
     }
 
     fn connect_common(
@@ -234,7 +238,6 @@ impl WebTransportTask {
             });
         }
     }
-
 }
 
 impl WebTransportTask {
