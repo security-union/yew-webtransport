@@ -2,6 +2,7 @@ use anyhow::Error;
 use serde_derive::{Deserialize, Serialize};
 use yew_webtransport::macros::Json;
 
+use gloo_console::log;
 use yew::{html, Component, Context, Html};
 use yew_webtransport::webtransport::{WebTransportService, WebTransportStatus, WebTransportTask};
 
@@ -86,12 +87,17 @@ impl Component for Model {
                         }
                     });
                     let task = WebTransportService::connect(
-                        "wss://echo.webtransport.events/",
+                        "https://echo.webtransport.day",
                         callback,
                         notification,
-                    )
-                    .unwrap();
-                    self.transport = Some(task);
+                    );
+                    self.transport = match task {
+                        Ok(task) => Some(task),
+                        Err(err) => {
+                            log!("Failed to connect to WebTransport:");
+                            None
+                        }
+                    };
                     true
                 }
                 WsAction::SendData(binary) => {

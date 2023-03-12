@@ -894,6 +894,7 @@ dependencies = [
  "futures",
  "futures-util",
  "gloo 0.2.1",
+ "gloo-console",
  "js-sys",
  "serde",
  "serde_derive",

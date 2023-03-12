@@ -21,7 +21,7 @@ serde = "1"
 serde_derive = "1"
 serde_json = "1.0"
 gloo = { version = "0.2.1", optional = false }
-
+gloo-console = "0.2.1"
 
 [dependencies.web-sys]
 version = "0.3.61"

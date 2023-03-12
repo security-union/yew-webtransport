@@ -77,6 +77,7 @@ name = "frontend"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "gloo-console",
  "serde",
  "serde_derive",
  "serde_json",
@@ -914,6 +915,7 @@ dependencies = [
  "futures",
  "futures-util",
  "gloo 0.2.1",
+ "gloo-console",
  "js-sys",
  "serde",
  "serde_derive",
