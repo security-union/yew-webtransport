@@ -180,7 +180,7 @@ impl Component for Model {
                 <nav class="menu">
                 </nav>
                 <div id="tool">
-                    <img class="banner" src="/assets/banner.jpeg"/>
+                    <img class="banner" src="./assets/banner.jpeg"/>
                     <h1>{"Yew-WebTransport test client"}</h1>
                     <div>
                         <h2>{"Establish WebTransport connection"}</h2>
