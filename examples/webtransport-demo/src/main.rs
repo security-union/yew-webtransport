@@ -27,7 +27,7 @@ pub enum WsAction {
 
 pub enum Msg {
     WsAction(WsAction),
-    WsReady(Vec<u8>),
+    WsReady(Vec<u8>, WebTransportMessageType),
 }
 
 impl From<WsAction> for Msg {
@@ -72,8 +72,8 @@ impl Component for Model {
         match msg {
             Msg::WsAction(action) => match action {
                 WsAction::Connect => {
-                    let on_datagram = ctx.link().callback(Msg::WsReady);
-                    let on_unidirectional_stream = ctx.link().callback(Msg::WsReady);
+                    let on_datagram = ctx.link().callback(|d| Msg::WsReady(d, WebTransportMessageType::Datagram));
+                    let on_unidirectional_stream = ctx.link().callback(|d| Msg::WsReady(d, WebTransportMessageType::UnidirectionalStream));
                     let notification = ctx.link().batch_callback(|status| match status {
                         WebTransportStatus::Opened => {
                             Some(WsAction::Log(String::from("Connected")).into())
@@ -113,7 +113,7 @@ impl Component for Model {
                                 );
                             }
                             WebTransportMessageType::BidirectionalStream => {
-                                let on_bidirectional_stream = ctx.link().callback(Msg::WsReady);
+                                let on_bidirectional_stream = ctx.link().callback(|d| Msg::WsReady(d, WebTransportMessageType::BidirectionalStream));
                                 WebTransportTask::send_bidirectional_stream(
                                     transport.transport.clone(),
                                     text,
@@ -157,10 +157,10 @@ impl Component for Model {
                     true
                 }
             },
-            Msg::WsReady(response) => {
+            Msg::WsReady(response, message_type) => {
                 let data = String::from_utf8(response).unwrap();
                 ctx.link()
-                    .send_message(WsAction::Log(format!("We received {data:?}")));
+                    .send_message(WsAction::Log(format!("We received {data:?} through {message_type:?}")));
                 true
             }
         }
@@ -229,7 +229,7 @@ impl Component for Model {
                                         WsAction::SetMessageType(WebTransportMessageType::Unknown)
                                     }
                                 })} checked={message_type==WebTransportMessageType::UnidirectionalStream}/>
-                                <label for="unidi-stream">{"Open a unidirectional stream"}</label>
+                                <label for="unidi-stream">{"Open a unidirectional stream (** test server does not echo)"}</label>
                             </div>
                             <div>
                                 <input type="radio" name="sendtype" id="bidi-stream" value="bidi" onchange={ctx.link().callback(|e: Event|{
