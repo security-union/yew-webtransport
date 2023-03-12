@@ -1,6 +1,4 @@
 use chrono::Local;
-use gloo_console::log;
-use serde_derive::{Deserialize, Serialize};
 use web_sys::HtmlInputElement;
 use web_sys::HtmlTextAreaElement;
 use web_sys::KeyboardEvent;
@@ -21,6 +19,7 @@ pub enum WsAction {
     SendData(),
     SetText(String),
     SetMessageType(WebTransportMessageType),
+    SetUrl(String),
     Log(String),
     Disconnect,
     Lost,
@@ -35,18 +34,6 @@ impl From<WsAction> for Msg {
     fn from(action: WsAction) -> Self {
         Msg::WsAction(action)
     }
-}
-
-/// This type is used as a request which sent to webtransport connection.
-#[derive(Serialize, Debug)]
-struct WsRequest {
-    value: Vec<u8>,
-}
-
-/// This type is an expected response from a webtransport connection.
-#[derive(Deserialize, Debug)]
-pub struct WsResponse {
-    value: Vec<u8>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -85,7 +72,8 @@ impl Component for Model {
         match msg {
             Msg::WsAction(action) => match action {
                 WsAction::Connect => {
-                    let callback = ctx.link().callback(Msg::WsReady);
+                    let on_datagram = ctx.link().callback(Msg::WsReady);
+                    let on_unidirectional_stream = ctx.link().callback(Msg::WsReady);
                     let notification = ctx.link().batch_callback(|status| match status {
                         WebTransportStatus::Opened => {
                             Some(WsAction::Log(String::from("Connected")).into())
@@ -95,11 +83,11 @@ impl Component for Model {
                         }
                     });
                     let endpoint = self.endpoint.clone();
-                    let task = WebTransportService::connect(&endpoint, callback, notification);
+                    let task = WebTransportService::connect(&endpoint, on_datagram, on_unidirectional_stream, notification);
                     self.transport = match task {
                         Ok(task) => Some(task),
-                        Err(_err) => {
-                            log!("Failed to connect to WebTransport:");
+                        Err(err) => {
+                            ctx.link().send_message(WsAction::Log(err.to_string()));
                             None
                         }
                     };
@@ -114,7 +102,26 @@ impl Component for Model {
                             &text, message_type
                         )));
                         let text = text.into_bytes();
-                        WebTransportTask::send_binary(transport.transport.clone(), text);
+                        match message_type {
+                            WebTransportMessageType::Datagram => {
+                                WebTransportTask::send_datagram(transport.transport.clone(), text);
+                            }
+                            WebTransportMessageType::UnidirectionalStream => {
+                                WebTransportTask::send_unidirectional_stream(
+                                    transport.transport.clone(),
+                                    text,
+                                );
+                            }
+                            WebTransportMessageType::BidirectionalStream => {
+                                let on_bidirectional_stream = ctx.link().callback(Msg::WsReady);
+                                WebTransportTask::send_bidirectional_stream(
+                                    transport.transport.clone(),
+                                    text,
+                                    on_bidirectional_stream,
+                                );
+                            }
+                            WebTransportMessageType::Unknown => {}
+                        }
                     };
 
                     false
@@ -128,6 +135,10 @@ impl Component for Model {
                 }
                 WsAction::SetText(text) => {
                     self.text = text;
+                    true
+                }
+                WsAction::SetUrl(url) => {
+                    self.endpoint = url;
                     true
                 }
                 WsAction::SetMessageType(message_type) => {
@@ -168,7 +179,16 @@ impl Component for Model {
                         <h2>{"Establish WebTransport connection"}</h2>
                         <div class="input-line">
                             <label for="url">{"URL:"}</label>
-                            <input type="text" name="url" id="url" value={self.endpoint.clone()}/>
+                            <input type="text"
+                                name="url" 
+                                id="url" 
+                                value={self.endpoint.clone()}
+                                disabled={self.transport.is_some()} 
+                                onkeyup={ctx.link().callback(|e: KeyboardEvent| {
+                                    let input = e.target_dyn_into::<HtmlInputElement>().unwrap();
+                                    let text = input.value();
+                                    WsAction::SetUrl(text)
+                                })}/>
                             <input type="button"
                                 id="connect"
                                 disabled={self.transport.is_some()}
