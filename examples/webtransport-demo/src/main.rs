@@ -1,16 +1,16 @@
 use anyhow::Error;
-use serde_derive::{Deserialize, Serialize};
-use yew_webtransport::macros::Json;
 use chrono::{DateTime, Local};
-
-
 use gloo_console::log;
+use serde_derive::{Deserialize, Serialize};
+use web_sys::HtmlTextAreaElement;
+use web_sys::KeyboardEvent;
+use yew::prelude::*;
+use yew::TargetCast;
 use yew::{html, Component, Context, Html};
+use yew_webtransport::macros::Json;
 use yew_webtransport::webtransport::{WebTransportService, WebTransportStatus, WebTransportTask};
 
 const DEFAULT_URL: &str = "https://echo.webtransport.day";
-
-type AsBinary = bool;
 
 pub enum Format {
     Json,
@@ -19,7 +19,8 @@ pub enum Format {
 
 pub enum WsAction {
     Connect,
-    SendData(AsBinary),
+    SendData(),
+    SetText(String),
     Disconnect,
     Lost,
 }
@@ -38,19 +39,21 @@ impl From<WsAction> for Msg {
 /// This type is used as a request which sent to webtransport connection.
 #[derive(Serialize, Debug)]
 struct WsRequest {
-    value: u32,
+    value: Vec<u8>,
 }
 
 /// This type is an expected response from a webtransport connection.
 #[derive(Deserialize, Debug)]
 pub struct WsResponse {
-    value: u32,
+    value: Vec<u8>,
 }
 
 pub struct Model {
     pub fetching: bool,
     pub transport: Option<WebTransportTask>,
     pub log: Vec<String>,
+    pub endpoint: String,
+    pub text: String,
 }
 
 impl Component for Model {
@@ -62,6 +65,8 @@ impl Component for Model {
             fetching: false,
             transport: None,
             log: vec![],
+            endpoint: DEFAULT_URL.to_string(),
+            text: "".to_string(),
         }
     }
 
@@ -71,18 +76,13 @@ impl Component for Model {
                 WsAction::Connect => {
                     let callback = ctx.link().callback(|Json(data)| Msg::WsReady(data));
                     let notification = ctx.link().batch_callback(|status| match status {
-                        WebTransportStatus::Opened => {
-                            None
-                        },
+                        WebTransportStatus::Opened => None,
                         WebTransportStatus::Closed | WebTransportStatus::Error => {
                             Some(WsAction::Lost.into())
                         }
                     });
-                    let task = WebTransportService::connect(
-                        DEFAULT_URL,
-                        callback,
-                        notification,
-                    );
+                    let endpoint = self.endpoint.clone();
+                    let task = WebTransportService::connect(&endpoint, callback, notification);
                     self.transport = match task {
                         Ok(task) => Some(task),
                         Err(err) => {
@@ -92,8 +92,9 @@ impl Component for Model {
                     };
                     true
                 }
-                WsAction::SendData(binary) => {
-                    let request = WsRequest { value: 321 };
+                WsAction::SendData() => {
+                    let text = self.text.clone().into_bytes();
+                    let request = WsRequest { value: text };
                     if let Some(transport) = self.transport.as_ref() {
                         WebTransportTask::send_binary(transport.transport.clone(), Json(&request));
                     };
@@ -102,6 +103,10 @@ impl Component for Model {
                 }
                 WsAction::Disconnect => {
                     self.transport.take();
+                    true
+                }
+                WsAction::SetText(text) => {
+                    self.text = text;
                     true
                 }
                 WsAction::Lost => {
@@ -122,39 +127,35 @@ impl Component for Model {
         html! {
             <div>
                 <nav class="menu">
-                    <button disabled={self.transport.is_none()}
-                            onclick={ctx.link().callback(|_| WsAction::SendData(false))}>
-                        { "Send To WebTransport" }
-                    </button>
-                    <button disabled={self.transport.is_none()}
-                            onclick={ctx.link().callback(|_| WsAction::SendData(true))}>
-                        { "Send To WebTransport [binary]" }
-                    </button>
                 </nav>
                 <div id="tool">
                     <img class="banner" src="/assets/banner.jpeg"/>
-                    <h1>{"WebTransport over HTTP/3 client"}</h1>
+                    <h1>{"Yew-WebTransport test client"}</h1>
                     <div>
                         <h2>{"Establish WebTransport connection"}</h2>
                         <div class="input-line">
                             <label for="url">{"URL:"}</label>
-                            <input type="text" name="url" id="url" value={DEFAULT_URL.to_string()}/>
-                            <input type="button" 
-                                id="connect" 
-                                disabled={self.transport.is_some()} 
-                                value="Connect" 
+                            <input type="text" name="url" id="url" value={self.endpoint.clone()}/>
+                            <input type="button"
+                                id="connect"
+                                disabled={self.transport.is_some()}
+                                value="Connect"
                                 onclick={ctx.link().callback(|_| WsAction::Connect)}/>
-                            <input type="button" 
-                                id="connect" 
-                                disabled={self.transport.is_none()} 
-                                value="Disconnect" 
+                            <input type="button"
+                                id="connect"
+                                disabled={self.transport.is_none()}
+                                value="Disconnect"
                                 onclick={ctx.link().callback(|_| WsAction::Disconnect)}/>
                         </div>
                     </div>
                     <div>
                         <h2>{"Send data over WebTransport"}</h2>
                         <form name="sending">
-                            <textarea name="data" id="data"></textarea>
+                            <textarea onkeyup={ctx.link().callback(|e: KeyboardEvent| {
+                                let input = e.target_dyn_into::<HtmlTextAreaElement>().unwrap();
+                                let text = input.value();
+                                WsAction::SetText(text)
+                            })} name="data" id="data"></textarea>
                             <div>
                                 <input type="radio" name="sendtype" id="datagram" checked=false value="datagram"/>
                                 <label for="datagram">{"Send a datagram"}</label>
@@ -167,7 +168,12 @@ impl Component for Model {
                                 <input type="radio" name="sendtype" id="bidi-stream" value="bidi"/>
                                 <label for="bidi-stream">{"Open a bidirectional stream"}</label>
                             </div>
-                            <input type="button" id="send" name="send" disabled=false value="Send data"/>
+                            <input type="button"
+                                id="send"
+                                name="send"
+                                disabled={self.transport.is_none()}
+                                value="Send data"
+                                onclick={ctx.link().callback(|_| WsAction::SendData())}/>
                         </form>
                     </div>
                     <div>
