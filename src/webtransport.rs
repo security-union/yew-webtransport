@@ -142,11 +142,7 @@ impl WebTransportService {
             on_unidirectional_stream,
         );
 
-        Ok(WebTransportTask::new(
-            transport.clone(),
-            notification,
-            listeners,
-        ))
+        Ok(WebTransportTask::new(transport, notification, listeners))
     }
 
     fn start_listening_incoming_directional_streams(
@@ -163,8 +159,7 @@ impl WebTransportService {
                     Err(e) => {
                         let mut reason = WebTransportCloseInfo::default();
                         reason.reason(
-                            format!("Failed to read incoming unidirectional strams {:?}", e)
-                                .as_str(),
+                            format!("Failed to read incoming unidirectional strams {e:?}").as_str(),
                         );
                         transport.close_with_close_info(&reason);
                         break;
@@ -197,8 +192,7 @@ impl WebTransportService {
                 match read_result {
                     Err(e) => {
                         let mut reason = WebTransportCloseInfo::default();
-                        reason
-                            .reason(format!("Failed to read incoming datagrams {:?}", e).as_str());
+                        reason.reason(format!("Failed to read incoming datagrams {e:?}").as_str());
                         transport.close_with_close_info(&reason);
                         break;
                     }
@@ -225,7 +219,7 @@ impl WebTransportService {
     ) -> Result<ConnectCommon, WebTransportError> {
         let transport = WebTransport::new(url);
         let transport = transport.map_err(|e| {
-            WebTransportError::CreationError(format!("Failed to create WebTransport: {:?}", e))
+            WebTransportError::CreationError(format!("Failed to create WebTransport: {e:?}"))
         })?;
 
         let notify = notification.clone();
@@ -259,7 +253,7 @@ fn process_binary(bytes: &Uint8Array, callback: &Callback<Vec<u8>>) {
 impl WebTransportTask {
     /// Sends data to a WebTransport connection.
     pub fn send_datagram(transport: Rc<WebTransport>, data: Vec<u8>) {
-        let transport = transport.clone();
+        let transport = transport;
         wasm_bindgen_futures::spawn_local(async move {
             let transport = transport.clone();
             let result: Result<(), anyhow::Error> = async move {
@@ -267,7 +261,7 @@ impl WebTransportTask {
                 let stream: WritableStream = stream.writable();
                 let writer = stream.get_writer().map_err(|e| anyhow!("{:?}", e))?;
                 let data = Uint8Array::from(data.as_slice());
-                let stream = JsFuture::from(writer.write_with_chunk(&data))
+                let _stream = JsFuture::from(writer.write_with_chunk(&data))
                     .await
                     .map_err(|e| anyhow::anyhow!("{:?}", e))?;
                 writer.release_lock();
@@ -282,7 +276,7 @@ impl WebTransportTask {
     }
 
     pub fn send_unidirectional_stream(transport: Rc<WebTransport>, data: Vec<u8>) {
-        let transport = transport.clone();
+        let transport = transport;
         wasm_bindgen_futures::spawn_local(async move {
             let transport = transport.clone();
             let result: Result<(), anyhow::Error> = async move {
@@ -313,7 +307,7 @@ impl WebTransportTask {
         data: Vec<u8>,
         callback: Callback<Vec<u8>>,
     ) {
-        let transport = transport.clone();
+        let transport = transport;
         wasm_bindgen_futures::spawn_local(async move {
             let transport = transport.clone();
             let result: Result<(), anyhow::Error> = async move {
@@ -338,7 +332,7 @@ impl WebTransportTask {
                         Err(e) => {
                             let mut reason = WebTransportCloseInfo::default();
                             reason.reason(
-                                format!("Failed to read incoming datagrams {:?}", e).as_str(),
+                                format!("Failed to read incoming datagrams {e:?}").as_str(),
                             );
                             transport.close_with_close_info(&reason);
                         }
