@@ -30,12 +30,10 @@ use thiserror::Error as ThisError;
 use wasm_bindgen_futures::JsFuture;
 use yew::callback::Callback;
 
+use gloo_console::log;
 use js_sys::{Boolean, JsString, Promise, Reflect, Uint8Array};
 use wasm_bindgen::{prelude::Closure, JsCast, JsValue};
-use web_sys::{ReadableStreamDefaultReader,
-    WebTransport, WritableStream, console::log,
-};
-use gloo_console::log;
+use web_sys::{console::log, ReadableStreamDefaultReader, WebTransport, WritableStream};
 
 /// Represents formatting errors.
 #[derive(Debug, ThisError)]
@@ -128,7 +126,8 @@ impl WebTransportService {
     {
         let ConnectCommon(transport, listeners) = Self::connect_common(url, &notification)?;
         let datagrams = transport.datagrams();
-        let incoming_datagrams: ReadableStreamDefaultReader = datagrams.readable().get_reader().unchecked_into();
+        let incoming_datagrams: ReadableStreamDefaultReader =
+            datagrams.readable().get_reader().unchecked_into();
         wasm_bindgen_futures::spawn_local(async move {
             loop {
                 let read_result = JsFuture::from(incoming_datagrams.read()).await;
@@ -165,24 +164,22 @@ impl WebTransportService {
         notification: &Callback<WebTransportStatus>,
     ) -> Result<ConnectCommon, WebTransportError> {
         let transport = WebTransport::new(url);
-        log!("got here");
         let transport = transport.unwrap();
 
         let notify = notification.clone();
-        // let on_connect = Closure::wrap(Box::new(move || {
-        //     notify.emit(WebTransportStatus::Opened);
-        // }) as Box<dyn FnMut(JsValue)>);
-        // on_connect.forget(); 
-        let ready = transport
-            .ready();
-        
+
+        let closure = Closure::wrap(Box::new(move |e| {
+            notify.emit(WebTransportStatus::Opened);
+        }) as Box<dyn FnMut(JsValue)>);
+        let ready = transport.ready().then(&closure);
+        closure.forget();
 
         let notify = notification.clone();
-        let closed = transport
-            .closed()
-            .then(&Closure::wrap(Box::new(move |result| {
-                notify.emit(WebTransportStatus::Closed);
-            }) as Box<dyn FnMut(JsValue)>));
+        let closed_closure = Closure::wrap(Box::new(move |e| {
+            notify.emit(WebTransportStatus::Closed);
+        }) as Box<dyn FnMut(JsValue)>);
+        let closed = transport.closed().then(&closed_closure);
+        closed_closure.forget();
 
         {
             let listeners = [ready, closed];
@@ -190,7 +187,6 @@ impl WebTransportService {
         }
     }
 }
-
 struct ConnectCommon(WebTransport, [Promise; 2]);
 
 fn process_binary<OUT: 'static>(bytes: &Uint8Array, callback: &Callback<OUT>)
@@ -224,9 +220,9 @@ impl WebTransportTask {
                     Ok(())
                 }
                 .await;
-                if let Err(e)  = result {
+                if let Err(e) = result {
                     let e = e.to_string();
-                    log!("error: {}", e );
+                    log!("error: {}", e);
                     // self.notification.emit(WebTransportStatus::Error);
                 }
             });
