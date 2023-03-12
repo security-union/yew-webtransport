@@ -33,7 +33,7 @@ use yew::callback::Callback;
 use gloo_console::log;
 use js_sys::{Boolean, JsString, Promise, Reflect, Uint8Array};
 use wasm_bindgen::{prelude::Closure, JsCast, JsValue};
-use web_sys::{console::log, ReadableStreamDefaultReader, WebTransport, WritableStream};
+use web_sys::{ReadableStreamDefaultReader, WebTransport, WritableStream};
 
 /// Represents formatting errors.
 #[derive(Debug, ThisError)]
@@ -116,14 +116,11 @@ pub struct WebTransportService {}
 impl WebTransportService {
     /// Connects to a server through a WebTransport connection. Needs two callbacks; one is passed
     /// data, the other is passed updates about the WebTransport's status.
-    pub fn connect<OUT: 'static>(
+    pub fn connect(
         url: &str,
-        callback: Callback<OUT>,
+        callback: Callback<Vec<u8>>,
         notification: Callback<WebTransportStatus>,
-    ) -> Result<WebTransportTask, WebTransportError>
-    where
-        OUT: From<Text> + From<Binary>,
-    {
+    ) -> Result<WebTransportTask, WebTransportError> {
         let ConnectCommon(transport, listeners) = Self::connect_common(url, &notification)?;
         let datagrams = transport.datagrams();
         let incoming_datagrams: ReadableStreamDefaultReader =
@@ -189,44 +186,35 @@ impl WebTransportService {
 }
 struct ConnectCommon(WebTransport, [Promise; 2]);
 
-fn process_binary<OUT: 'static>(bytes: &Uint8Array, callback: &Callback<OUT>)
-where
-    OUT: From<Binary>,
-{
-    let data = Ok(bytes.to_vec());
-    let out = OUT::from(data);
-    callback.emit(out);
+fn process_binary(bytes: &Uint8Array, callback: &Callback<Vec<u8>>) {
+    let data = bytes.to_vec();
+    callback.emit(data);
 }
 
 impl WebTransportTask {
     /// Sends data to a WebTransport connection.
-    pub fn send_binary<IN>(transport: Rc<WebTransport>, data: IN)
-    where
-        IN: Into<Text>,
-    {
+    pub fn send_binary(transport: Rc<WebTransport>, data: Vec<u8>) {
         let transport = transport.clone();
-        if let Ok(body) = data.into() {
-            wasm_bindgen_futures::spawn_local(async move {
-                let transport = transport.clone();
-                let result: Result<(), anyhow::Error> = async move {
-                    let stream = transport.datagrams();
-                    let stream: WritableStream = stream.writable();
-                    let writer = stream.get_writer().map_err(|e| anyhow!("{:?}", e))?;
-                    let data = Uint8Array::from(body.as_bytes());
-                    let stream = JsFuture::from(writer.write_with_chunk(&data))
-                        .await
-                        .map_err(|e| anyhow::anyhow!("{:?}", e))?;
-                    writer.release_lock();
-                    Ok(())
-                }
-                .await;
-                if let Err(e) = result {
-                    let e = e.to_string();
-                    log!("error: {}", e);
-                    // self.notification.emit(WebTransportStatus::Error);
-                }
-            });
-        }
+        wasm_bindgen_futures::spawn_local(async move {
+            let transport = transport.clone();
+            let result: Result<(), anyhow::Error> = async move {
+                let stream = transport.datagrams();
+                let stream: WritableStream = stream.writable();
+                let writer = stream.get_writer().map_err(|e| anyhow!("{:?}", e))?;
+                let data = Uint8Array::from(data.as_slice());
+                let stream = JsFuture::from(writer.write_with_chunk(&data))
+                    .await
+                    .map_err(|e| anyhow::anyhow!("{:?}", e))?;
+                writer.release_lock();
+                Ok(())
+            }
+            .await;
+            if let Err(e) = result {
+                let e = e.to_string();
+                log!("error: {}", e);
+                // self.notification.emit(WebTransportStatus::Error);
+            }
+        });
     }
 }
 

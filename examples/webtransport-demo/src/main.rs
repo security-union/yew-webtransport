@@ -2,12 +2,12 @@ use anyhow::Error;
 use chrono::{DateTime, Local};
 use gloo_console::log;
 use serde_derive::{Deserialize, Serialize};
+use web_sys::HtmlInputElement;
 use web_sys::HtmlTextAreaElement;
 use web_sys::KeyboardEvent;
 use yew::prelude::*;
 use yew::TargetCast;
 use yew::{html, Component, Context, Html};
-use yew_webtransport::macros::Json;
 use yew_webtransport::webtransport::{WebTransportService, WebTransportStatus, WebTransportTask};
 
 const DEFAULT_URL: &str = "https://echo.webtransport.day";
@@ -21,13 +21,15 @@ pub enum WsAction {
     Connect,
     SendData(),
     SetText(String),
+    SetMessageType(WebTransportMessageType),
+    Log(String),
     Disconnect,
     Lost,
 }
 
 pub enum Msg {
     WsAction(WsAction),
-    WsReady(Result<WsResponse, Error>),
+    WsReady(Vec<u8>),
 }
 
 impl From<WsAction> for Msg {
@@ -48,12 +50,21 @@ pub struct WsResponse {
     value: Vec<u8>,
 }
 
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum WebTransportMessageType {
+    Datagram,
+    UnidirectionalStream,
+    BidirectionalStream,
+    Unknown,
+}
+
 pub struct Model {
     pub fetching: bool,
     pub transport: Option<WebTransportTask>,
     pub log: Vec<String>,
     pub endpoint: String,
     pub text: String,
+    pub message_type: WebTransportMessageType,
 }
 
 impl Component for Model {
@@ -67,6 +78,7 @@ impl Component for Model {
             log: vec![],
             endpoint: DEFAULT_URL.to_string(),
             text: "".to_string(),
+            message_type: WebTransportMessageType::Datagram,
         }
     }
 
@@ -74,9 +86,11 @@ impl Component for Model {
         match msg {
             Msg::WsAction(action) => match action {
                 WsAction::Connect => {
-                    let callback = ctx.link().callback(|Json(data)| Msg::WsReady(data));
+                    let callback = ctx.link().callback(|data| Msg::WsReady(data));
                     let notification = ctx.link().batch_callback(|status| match status {
-                        WebTransportStatus::Opened => None,
+                        WebTransportStatus::Opened => {
+                            Some(WsAction::Log(String::from("Connected")).into())
+                        }
                         WebTransportStatus::Closed | WebTransportStatus::Error => {
                             Some(WsAction::Lost.into())
                         }
@@ -93,37 +107,55 @@ impl Component for Model {
                     true
                 }
                 WsAction::SendData() => {
-                    let text = self.text.clone().into_bytes();
-                    let request = WsRequest { value: text };
+                    let text = self.text.clone();
+                    let message_type = self.message_type.clone();
                     if let Some(transport) = self.transport.as_ref() {
-                        WebTransportTask::send_binary(transport.transport.clone(), Json(&request));
+                        ctx.link().send_message(WsAction::Log(format!(
+                            "Sending: {:?} using {:?}",
+                            &text, message_type
+                        )));
+                        let text = text.into_bytes();
+                        WebTransportTask::send_binary(transport.transport.clone(), text);
                     };
 
                     false
                 }
                 WsAction::Disconnect => {
-                    self.transport.take();
+                    let connection = self.transport.take();
+                    connection.map(|connection| connection.transport.close());
                     true
                 }
                 WsAction::SetText(text) => {
                     self.text = text;
                     true
                 }
+                WsAction::SetMessageType(message_type) => {
+                    self.message_type = message_type;
+                    true
+                }
+                WsAction::Log(text) => {
+                    let text = format!("{}: {}", Local::now().format("%H:%M:%S%.3f"), text);
+                    self.log.splice(0..0, vec![text]);
+                    true
+                }
                 WsAction::Lost => {
                     self.transport = None;
+                    ctx.link()
+                        .send_message(WsAction::Log(String::from("Connection lost")));
                     true
                 }
             },
             Msg::WsReady(response) => {
-                let data = response.map(|data| data.value).ok();
-                let update = format!("{} - resp datagram: {:?}", get_time(), data);
-                self.log.splice(0..0, vec![update]);
+                let data = String::from_utf8(response).unwrap();
+                ctx.link()
+                    .send_message(WsAction::Log(format!("We received {:?}", data)));
                 true
             }
         }
     }
 
     fn view(&self, ctx: &Context<Self>) -> Html {
+        let message_type = self.message_type.clone();
         html! {
             <div>
                 <nav class="menu">
@@ -155,17 +187,38 @@ impl Component for Model {
                                 let input = e.target_dyn_into::<HtmlTextAreaElement>().unwrap();
                                 let text = input.value();
                                 WsAction::SetText(text)
-                            })} name="data" id="data"></textarea>
+                            })} name="data" id="data" disabled={self.transport.is_none()}></textarea>
                             <div>
-                                <input type="radio" name="sendtype" id="datagram" checked=false value="datagram"/>
+                                <input type="radio" name="sendtype" id="datagram" onchange={ctx.link().callback(|e: Event|{
+                                    let input = e.target_dyn_into::<HtmlInputElement>().unwrap();
+                                    if input.checked() {
+                                        WsAction::SetMessageType(WebTransportMessageType::Datagram)
+                                    } else {
+                                        WsAction::SetMessageType(WebTransportMessageType::Unknown)
+                                    }
+                                })} checked={message_type==WebTransportMessageType::Datagram} value="datagram"/>
                                 <label for="datagram">{"Send a datagram"}</label>
                             </div>
                             <div>
-                                <input type="radio" name="sendtype" id="unidi-stream" value="unidi"/>
+                                <input type="radio" name="sendtype" id="unidi-stream" value="unidi" onchange={ctx.link().callback(|e: Event|{
+                                    let input = e.target_dyn_into::<HtmlInputElement>().unwrap();
+                                    if input.checked() {
+                                        WsAction::SetMessageType(WebTransportMessageType::UnidirectionalStream)
+                                    } else {
+                                        WsAction::SetMessageType(WebTransportMessageType::Unknown)
+                                    }
+                                })} checked={message_type==WebTransportMessageType::UnidirectionalStream}/>
                                 <label for="unidi-stream">{"Open a unidirectional stream"}</label>
                             </div>
                             <div>
-                                <input type="radio" name="sendtype" id="bidi-stream" value="bidi"/>
+                                <input type="radio" name="sendtype" id="bidi-stream" value="bidi" onchange={ctx.link().callback(|e: Event|{
+                                    let input = e.target_dyn_into::<HtmlInputElement>().unwrap();
+                                    if input.checked() {
+                                        WsAction::SetMessageType(WebTransportMessageType::BidirectionalStream)
+                                    } else {
+                                        WsAction::SetMessageType(WebTransportMessageType::Unknown)
+                                    }
+                                })} checked={message_type==WebTransportMessageType::BidirectionalStream}/>
                                 <label for="bidi-stream">{"Open a bidirectional stream"}</label>
                             </div>
                             <input type="button"
@@ -186,11 +239,6 @@ impl Component for Model {
             </div>
         }
     }
-}
-
-fn get_time() -> String {
-    let now: DateTime<Local> = Local::now();
-    now.format("%H:%M:%S").to_string()
 }
 
 fn main() {
