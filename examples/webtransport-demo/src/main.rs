@@ -1,5 +1,4 @@
-use anyhow::Error;
-use chrono::{DateTime, Local};
+use chrono::Local;
 use gloo_console::log;
 use serde_derive::{Deserialize, Serialize};
 use web_sys::HtmlInputElement;
@@ -86,7 +85,7 @@ impl Component for Model {
         match msg {
             Msg::WsAction(action) => match action {
                 WsAction::Connect => {
-                    let callback = ctx.link().callback(|data| Msg::WsReady(data));
+                    let callback = ctx.link().callback(Msg::WsReady);
                     let notification = ctx.link().batch_callback(|status| match status {
                         WebTransportStatus::Opened => {
                             Some(WsAction::Log(String::from("Connected")).into())
@@ -99,7 +98,7 @@ impl Component for Model {
                     let task = WebTransportService::connect(&endpoint, callback, notification);
                     self.transport = match task {
                         Ok(task) => Some(task),
-                        Err(err) => {
+                        Err(_err) => {
                             log!("Failed to connect to WebTransport:");
                             None
                         }
@@ -122,7 +121,9 @@ impl Component for Model {
                 }
                 WsAction::Disconnect => {
                     let connection = self.transport.take();
-                    connection.map(|connection| connection.transport.close());
+                    if let Some(connection) = connection {
+                        connection.transport.close()
+                    }
                     true
                 }
                 WsAction::SetText(text) => {
@@ -148,7 +149,7 @@ impl Component for Model {
             Msg::WsReady(response) => {
                 let data = String::from_utf8(response).unwrap();
                 ctx.link()
-                    .send_message(WsAction::Log(format!("We received {:?}", data)));
+                    .send_message(WsAction::Log(format!("We received {data:?}")));
                 true
             }
         }
