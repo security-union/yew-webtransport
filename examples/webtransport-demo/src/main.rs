@@ -1,10 +1,14 @@
 use anyhow::Error;
 use serde_derive::{Deserialize, Serialize};
 use yew_webtransport::macros::Json;
+use chrono::{DateTime, Local};
+
 
 use gloo_console::log;
 use yew::{html, Component, Context, Html};
 use yew_webtransport::webtransport::{WebTransportService, WebTransportStatus, WebTransportTask};
+
+const DEFAULT_URL: &str = "https://echo.webtransport.day";
 
 type AsBinary = bool;
 
@@ -47,6 +51,7 @@ pub struct Model {
     pub fetching: bool,
     pub data: Option<u32>,
     pub transport: Option<WebTransportTask>,
+    pub log: Vec<String>,
 }
 
 impl Model {
@@ -72,6 +77,7 @@ impl Component for Model {
             fetching: false,
             data: None,
             transport: None,
+            log: vec![],
         }
     }
 
@@ -81,13 +87,15 @@ impl Component for Model {
                 WsAction::Connect => {
                     let callback = ctx.link().callback(|Json(data)| Msg::WsReady(data));
                     let notification = ctx.link().batch_callback(|status| match status {
-                        WebTransportStatus::Opened => None,
+                        WebTransportStatus::Opened => {
+                            None
+                        },
                         WebTransportStatus::Closed | WebTransportStatus::Error => {
                             Some(WsAction::Lost.into())
                         }
                     });
                     let task = WebTransportService::connect(
-                        "https://echo.webtransport.day",
+                        DEFAULT_URL,
                         callback,
                         notification,
                     );
@@ -119,6 +127,8 @@ impl Component for Model {
             },
             Msg::WsReady(response) => {
                 self.data = response.map(|data| data.value).ok();
+                let update = format!("{} - resp datagram: {:?}", get_time(), self.data);
+                self.log.splice(0..0, vec![update]);
                 true
             }
         }
@@ -129,10 +139,6 @@ impl Component for Model {
             <div>
                 <nav class="menu">
                     { self.view_data() }
-                    <button disabled={self.transport.is_some()}
-                            onclick={ctx.link().callback(|_| WsAction::Connect)}>
-                        { "Connect To WebTransport" }
-                    </button>
                     <button disabled={self.transport.is_none()}
                             onclick={ctx.link().callback(|_| WsAction::SendData(false))}>
                         { "Send To WebTransport" }
@@ -152,8 +158,12 @@ impl Component for Model {
                         <h2>{"Establish WebTransport connection"}</h2>
                         <div class="input-line">
                             <label for="url">{"URL:"}</label>
-                            <input type="text" name="url" id="url" value="https://echo.webtransport.day"/>
-                            <input type="button" id="connect" value="Connect"/>
+                            <input type="text" name="url" id="url" value={DEFAULT_URL.to_string()}/>
+                            <input type="button" 
+                                id="connect" 
+                                disabled={self.transport.is_some()} 
+                                value="Connect" 
+                                onclick={ctx.link().callback(|_| WsAction::Connect)}/>
                         </div>
                     </div>
                     <div>
@@ -177,12 +187,19 @@ impl Component for Model {
                     </div>
                     <div>
                         <h2>{"Event log"}</h2>
-                        <ul id="event-log"></ul>
+                        <ul id="event-log">
+                        { for self.log.iter().map(|log| html! { <li>{ log }</li> }) }
+                        </ul>
                     </div>
                 </div>
             </div>
         }
     }
+}
+
+fn get_time() -> String {
+    let now: DateTime<Local> = Local::now();
+    now.format("%H:%M:%S").to_string()
 }
 
 fn main() {
