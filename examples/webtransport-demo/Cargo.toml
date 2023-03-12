@@ -1,0 +1,26 @@
+[package]
+name = "frontend"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+yew = { version = "0.20.0", features = ["csr"] }
+anyhow = "1"
+serde = "1"
+serde_derive = "1"
+serde_json = "1.0"
+yew-webtransport = { path = "../../"}
+gloo-console = "0.2.3"
+chrono = "0.4.19"
+web-sys = {version = "0.3.61", features = [ "WebSocket", "WebTransport", "WritableStream", "ReadableStream", "ReadableStreamDefaultReader", "ReadableStreamReadResult", "WebTransportSendStream", "WritableStreamDefaultWriter", "WebTransportDatagramDuplexStream", "WebTransportCloseInfo", "WebTransportBidirectionalStream", "WebTransportReceiveStream"]}
+  
+
+
+[patch.crates-io]
+wasm-bindgen-shared = { path = "../../../wasm-bindgen/crates/shared" }
+js-sys = { path = "../../../wasm-bindgen/crates/js-sys" }
+web-sys = { path = "../../../wasm-bindgen/crates/web-sys" }
+wasm-bindgen-futures = { path = "../../../wasm-bindgen/crates/futures" }
+wasm-bindgen = { path = "../../../wasm-bindgen" }
