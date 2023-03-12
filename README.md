@@ -6,7 +6,9 @@ WebTransport is a new web standard that aims to provide a low-level API for secu
 
 ## Demo
 
-you can find a demo in the examples folder which is a port of the https://webtransport.day/ website to rust:
+you can find a demo in the examples folder which is a port of the https://webtransport.day/ website to rust.
+
+The website is live at https://security-union.github.io/yew-webtransport/
 
 ![send datagram](https://user-images.githubusercontent.com/1176339/224579691-6d8c1451-a935-4d75-a4a0-556305195c36.gif)
 
