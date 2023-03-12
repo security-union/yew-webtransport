@@ -146,6 +146,40 @@ impl Component for Model {
                         { "Close WebTransport connection" }
                     </button>
                 </nav>
+                <div id="tool">
+                    <h1>{"WebTransport over HTTP/3 client"}</h1>
+                    <div>
+                        <h2>{"Establish WebTransport connection"}</h2>
+                        <div class="input-line">
+                            <label for="url">{"URL:"}</label>
+                            <input type="text" name="url" id="url" value="https://echo.webtransport.day"/>
+                            <input type="button" id="connect" value="Connect"/>
+                        </div>
+                    </div>
+                    <div>
+                        <h2>{"Send data over WebTransport"}</h2>
+                        <form name="sending">
+                            <textarea name="data" id="data"></textarea>
+                            <div>
+                                <input type="radio" name="sendtype" id="datagram" checked=false value="datagram"/>
+                                <label for="datagram">{"Send a datagram"}</label>
+                            </div>
+                            <div>
+                                <input type="radio" name="sendtype" id="unidi-stream" value="unidi"/>
+                                <label for="unidi-stream">{"Open a unidirectional stream"}</label>
+                            </div>
+                            <div>
+                                <input type="radio" name="sendtype" id="bidi-stream" value="bidi"/>
+                                <label for="bidi-stream">{"Open a bidirectional stream"}</label>
+                            </div>
+                            <input type="button" id="send" name="send" disabled=false value="Send data"/>
+                        </form>
+                    </div>
+                    <div>
+                        <h2>{"Event log"}</h2>
+                        <ul id="event-log"></ul>
+                    </div>
+                </div>
             </div>
         }
     }

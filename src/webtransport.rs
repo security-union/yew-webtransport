@@ -133,7 +133,7 @@ impl WebTransportService {
                 let read_result = JsFuture::from(incoming_datagrams.read()).await;
                 match read_result {
                     Err(e) => {
-                        log!("Error reading from incoming_uni: {:?}", e);
+                        log!("Error reading from stream: {:?}", e);
                         break;
                     }
                     Ok(result) => {
