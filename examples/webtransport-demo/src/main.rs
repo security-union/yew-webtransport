@@ -9,11 +9,6 @@ use yew_webtransport::webtransport::{WebTransportService, WebTransportStatus, We
 
 const DEFAULT_URL: &str = "https://echo.webtransport.day";
 
-pub enum Format {
-    Json,
-    Toml,
-}
-
 pub enum WsAction {
     Connect,
     SendData(),
@@ -72,8 +67,12 @@ impl Component for Model {
         match msg {
             Msg::WsAction(action) => match action {
                 WsAction::Connect => {
-                    let on_datagram = ctx.link().callback(|d| Msg::WsReady(d, WebTransportMessageType::Datagram));
-                    let on_unidirectional_stream = ctx.link().callback(|d| Msg::WsReady(d, WebTransportMessageType::UnidirectionalStream));
+                    let on_datagram = ctx
+                        .link()
+                        .callback(|d| Msg::WsReady(d, WebTransportMessageType::Datagram));
+                    let on_unidirectional_stream = ctx.link().callback(|d| {
+                        Msg::WsReady(d, WebTransportMessageType::UnidirectionalStream)
+                    });
                     let notification = ctx.link().batch_callback(|status| match status {
                         WebTransportStatus::Opened => {
                             Some(WsAction::Log(String::from("Connected")).into())
@@ -83,7 +82,12 @@ impl Component for Model {
                         }
                     });
                     let endpoint = self.endpoint.clone();
-                    let task = WebTransportService::connect(&endpoint, on_datagram, on_unidirectional_stream, notification);
+                    let task = WebTransportService::connect(
+                        &endpoint,
+                        on_datagram,
+                        on_unidirectional_stream,
+                        notification,
+                    );
                     self.transport = match task {
                         Ok(task) => Some(task),
                         Err(err) => {
@@ -113,7 +117,9 @@ impl Component for Model {
                                 );
                             }
                             WebTransportMessageType::BidirectionalStream => {
-                                let on_bidirectional_stream = ctx.link().callback(|d| Msg::WsReady(d, WebTransportMessageType::BidirectionalStream));
+                                let on_bidirectional_stream = ctx.link().callback(|d| {
+                                    Msg::WsReady(d, WebTransportMessageType::BidirectionalStream)
+                                });
                                 WebTransportTask::send_bidirectional_stream(
                                     transport.transport.clone(),
                                     text,
@@ -159,8 +165,9 @@ impl Component for Model {
             },
             Msg::WsReady(response, message_type) => {
                 let data = String::from_utf8(response).unwrap();
-                ctx.link()
-                    .send_message(WsAction::Log(format!("We received {data:?} through {message_type:?}")));
+                ctx.link().send_message(WsAction::Log(format!(
+                    "We received {data:?} through {message_type:?}"
+                )));
                 true
             }
         }
@@ -180,10 +187,10 @@ impl Component for Model {
                         <div class="input-line">
                             <label for="url">{"URL:"}</label>
                             <input type="text"
-                                name="url" 
-                                id="url" 
+                                name="url"
+                                id="url"
                                 value={self.endpoint.clone()}
-                                disabled={self.transport.is_some()} 
+                                disabled={self.transport.is_some()}
                                 onkeyup={ctx.link().callback(|e: KeyboardEvent| {
                                     let input = e.target_dyn_into::<HtmlInputElement>().unwrap();
                                     let text = input.value();

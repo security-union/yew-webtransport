@@ -22,10 +22,8 @@ serde_derive = "1"
 serde_json = "1.0"
 gloo = { version = "0.2.1", optional = false }
 gloo-console = "0.2.1"
-
-[dependencies.web-sys]
-version = "0.3.61"
 web-sys = {version = "0.3.61", features = [ "WebSocket", "WebTransport", "WritableStream", "ReadableStream", "ReadableStreamDefaultReader", "ReadableStreamReadResult", "WebTransportSendStream", "WritableStreamDefaultWriter", "WebTransportDatagramDuplexStream", "WebTransportCloseInfo", "WebTransportBidirectionalStream", "WebTransportReceiveStream"]}
+
 
 [patch.crates-io]
 wasm-bindgen-shared = { path = "../wasm-bindgen/crates/shared" }

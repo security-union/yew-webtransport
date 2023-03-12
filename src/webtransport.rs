@@ -27,7 +27,6 @@ SOFTWARE.
 use anyhow::{anyhow, Error};
 use std::{fmt, rc::Rc};
 use thiserror::Error as ThisError;
-use wasm_bindgen::prelude::*;
 use wasm_bindgen_futures::JsFuture;
 use yew::callback::Callback;
 
@@ -231,14 +230,14 @@ impl WebTransportService {
 
         let notify = notification.clone();
 
-        let closure = Closure::wrap(Box::new(move |e| {
+        let closure = Closure::wrap(Box::new(move |_| {
             notify.emit(WebTransportStatus::Opened);
         }) as Box<dyn FnMut(JsValue)>);
         let ready = transport.ready().then(&closure);
         closure.forget();
 
         let notify = notification.clone();
-        let closed_closure = Closure::wrap(Box::new(move |e| {
+        let closed_closure = Closure::wrap(Box::new(move |_| {
             notify.emit(WebTransportStatus::Closed);
         }) as Box<dyn FnMut(JsValue)>);
         let closed = transport.closed().then(&closed_closure);

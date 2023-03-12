@@ -14,7 +14,6 @@ serde_json = "1.0"
 yew-webtransport = { path = "../../"}
 gloo-console = "0.2.3"
 chrono = "0.4.19"
-[target.'cfg(web_sys_unstable_apis)'.dependencies]
 web-sys = {version = "0.3.61", features = [ "WebSocket", "WebTransport", "WritableStream", "ReadableStream", "ReadableStreamDefaultReader", "ReadableStreamReadResult", "WebTransportSendStream", "WritableStreamDefaultWriter", "WebTransportDatagramDuplexStream", "WebTransportCloseInfo", "WebTransportBidirectionalStream", "WebTransportReceiveStream"]}
   
 
