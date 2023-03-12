@@ -49,23 +49,8 @@ pub struct WsResponse {
 
 pub struct Model {
     pub fetching: bool,
-    pub data: Option<u32>,
     pub transport: Option<WebTransportTask>,
     pub log: Vec<String>,
-}
-
-impl Model {
-    fn view_data(&self) -> Html {
-        if let Some(value) = self.data {
-            html! {
-                <p>{ value }</p>
-            }
-        } else {
-            html! {
-                <p>{ "Data hasn't fetched yet." }</p>
-            }
-        }
-    }
 }
 
 impl Component for Model {
@@ -75,7 +60,6 @@ impl Component for Model {
     fn create(_ctx: &Context<Self>) -> Self {
         Self {
             fetching: false,
-            data: None,
             transport: None,
             log: vec![],
         }
@@ -126,8 +110,8 @@ impl Component for Model {
                 }
             },
             Msg::WsReady(response) => {
-                self.data = response.map(|data| data.value).ok();
-                let update = format!("{} - resp datagram: {:?}", get_time(), self.data);
+                let data = response.map(|data| data.value).ok();
+                let update = format!("{} - resp datagram: {:?}", get_time(), data);
                 self.log.splice(0..0, vec![update]);
                 true
             }
@@ -138,7 +122,6 @@ impl Component for Model {
         html! {
             <div>
                 <nav class="menu">
-                    { self.view_data() }
                     <button disabled={self.transport.is_none()}
                             onclick={ctx.link().callback(|_| WsAction::SendData(false))}>
                         { "Send To WebTransport" }
@@ -147,12 +130,9 @@ impl Component for Model {
                             onclick={ctx.link().callback(|_| WsAction::SendData(true))}>
                         { "Send To WebTransport [binary]" }
                     </button>
-                    <button disabled={self.transport.is_none()}
-                            onclick={ctx.link().callback(|_| WsAction::Disconnect)}>
-                        { "Close WebTransport connection" }
-                    </button>
                 </nav>
                 <div id="tool">
+                    <img class="banner" src="/assets/banner.jpeg"/>
                     <h1>{"WebTransport over HTTP/3 client"}</h1>
                     <div>
                         <h2>{"Establish WebTransport connection"}</h2>
@@ -164,6 +144,11 @@ impl Component for Model {
                                 disabled={self.transport.is_some()} 
                                 value="Connect" 
                                 onclick={ctx.link().callback(|_| WsAction::Connect)}/>
+                            <input type="button" 
+                                id="connect" 
+                                disabled={self.transport.is_none()} 
+                                value="Disconnect" 
+                                onclick={ctx.link().callback(|_| WsAction::Disconnect)}/>
                         </div>
                     </div>
                     <div>
