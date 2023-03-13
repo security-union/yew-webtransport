@@ -40,7 +40,6 @@ pub enum WebTransportMessageType {
 }
 
 pub struct Model {
-    pub fetching: bool,
     pub transport: Option<WebTransportTask>,
     pub log: Vec<String>,
     pub endpoint: String,
@@ -54,7 +53,6 @@ impl Component for Model {
 
     fn create(_ctx: &Context<Self>) -> Self {
         Self {
-            fetching: false,
             transport: None,
             log: vec![],
             endpoint: DEFAULT_URL.to_string(),
