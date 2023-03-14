@@ -4,6 +4,10 @@
 
 Access WebTransport in Yew apps using wasm-bindgen https://github.com/rustwasm/wasm-bindgen/pull/3344
 
+YouTube Video: https://youtu.be/dztIToTf8Yc
+
+![thumbnail7](https://user-images.githubusercontent.com/1176339/224917256-68ae5fff-dc1c-4f29-8656-ae9232634cd7.png)
+
 ## Justification
 
 WebTransport is a new web standard that aims to provide a low-level API for secure, multiplexed communication between web browsers and servers. It has the potential to greatly improve the performance of web applications, especially those that require real-time communication or large data transfers. However, the current implementation of WebTransport in browsers is written in Javascript, which can make it difficult to use in Rust webapps.
