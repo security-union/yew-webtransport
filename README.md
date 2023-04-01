@@ -20,3 +20,9 @@ The website is live at https://security-union.github.io/yew-webtransport/
 
 ![send datagram](https://user-images.githubusercontent.com/1176339/224579691-6d8c1451-a935-4d75-a4a0-556305195c36.gif)
 
+If you want to run it locally, you have to set RUSTFLAGS
+
+```
+cd examples/webtransport-demo
+RUSTFLAGS=--cfg=web_sys_unstable_apis trunk serve
+```
