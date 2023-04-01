@@ -22,6 +22,9 @@ The website is live at https://security-union.github.io/yew-webtransport/
 
 If you want to run it locally, you have to set RUSTFLAGS
 
+Until wasm-bindgen releases my changes to crates.io you will have to install wasm-bindgen-cli by hand:
+```
+cargo install -f wasm-bindgen-cli --git https://github.com/rustwasm/wasm-bindgen.git  --rev 27173549f6a196a869cec525f8f87adec55c738c
 ```
 cd examples/webtransport-demo
 RUSTFLAGS=--cfg=web_sys_unstable_apis trunk serve

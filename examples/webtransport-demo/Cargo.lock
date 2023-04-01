@@ -127,7 +127,7 @@ dependencies = [
  "proc-macro2",
  "quote",
  "scratch",
- "syn 1.0.107",
+ "syn",
 ]
 
 [[package]]
@@ -144,7 +144,7 @@ checksum = "0b75aed41bb2e6367cae39e6326ef817a851db13c13e4f3263714ca3cfb8de56"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 1.0.107",
+ "syn",
 ]
 
 [[package]]
@@ -172,7 +172,6 @@ dependencies = [
  "serde",
  "serde_derive",
  "serde_json",
- "wasm-bindgen",
  "web-sys",
  "yew",
  "yew-webtransport",
@@ -234,7 +233,7 @@ checksum = "bdfb8ce053d86b91919aad980c220b1fb8401a9394410e1c289ed7e66b61835d"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 1.0.107",
+ "syn",
 ]
 
 [[package]]
@@ -532,7 +531,7 @@ checksum = "fad582f4b9e86b6caa621cabeb0963332d92eea04729ab12892c2533951e6440"
 [[package]]
 name = "js-sys"
 version = "0.3.61"
-source = "git+https://github.com/rustwasm/wasm-bindgen.git?rev=b41de3f22fc2427babe3a7d4184c369651452136#b41de3f22fc2427babe3a7d4184c369651452136"
+source = "git+https://github.com/rustwasm/wasm-bindgen.git?rev=27173549f6a196a869cec525f8f87adec55c738c#27173549f6a196a869cec525f8f87adec55c738c"
 dependencies = [
  "wasm-bindgen",
 ]
@@ -625,7 +624,7 @@ checksum = "069bdb1e05adc7a8990dce9cc75370895fbe4e3d58b9b73bf1aee56359344a55"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 1.0.107",
+ "syn",
 ]
 
 [[package]]
@@ -658,7 +657,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e97e3215779627f01ee256d2fad52f3d95e8e1c11e9fc6fd08f7cd455d5d5c78"
 dependencies = [
  "proc-macro2",
- "syn 1.0.107",
+ "syn",
 ]
 
 [[package]]
@@ -670,7 +669,7 @@ dependencies = [
  "proc-macro-error-attr",
  "proc-macro2",
  "quote",
- "syn 1.0.107",
+ "syn",
  "version_check",
 ]
 
@@ -767,7 +766,7 @@ checksum = "af487d118eecd09402d70a5d72551860e788df87b464af30e5ea6a38c75c541e"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 1.0.107",
+ "syn",
 ]
 
 [[package]]
@@ -814,17 +813,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "syn"
-version = "2.0.12"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "79d9531f94112cfc3e4c8f5f02cb2b58f72c97b7efd85f70203cc6d8efda5927"
-dependencies = [
- "proc-macro2",
- "quote",
- "unicode-ident",
-]
-
-[[package]]
 name = "termcolor"
 version = "1.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -850,7 +838,7 @@ checksum = "1fb327af4685e4d03fa8cbcf1716380da910eeb2bb8be417e7f9fd3fb164f36f"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 1.0.107",
+ "syn",
 ]
 
 [[package]]
@@ -906,7 +894,7 @@ checksum = "4017f8f45139870ca7e672686113917c71c7a6e02d4924eda67186083c03081a"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 1.0.107",
+ "syn",
 ]
 
 [[package]]
@@ -945,7 +933,7 @@ checksum = "1a143597ca7c7793eff794def352d41792a93c481eb1042423ff7ff72ba2c31f"
 [[package]]
 name = "wasm-bindgen"
 version = "0.2.84"
-source = "git+https://github.com/rustwasm/wasm-bindgen.git?rev=b41de3f22fc2427babe3a7d4184c369651452136#b41de3f22fc2427babe3a7d4184c369651452136"
+source = "git+https://github.com/rustwasm/wasm-bindgen.git?rev=27173549f6a196a869cec525f8f87adec55c738c#27173549f6a196a869cec525f8f87adec55c738c"
 dependencies = [
  "cfg-if",
  "wasm-bindgen-macro",
@@ -954,21 +942,21 @@ dependencies = [
 [[package]]
 name = "wasm-bindgen-backend"
 version = "0.2.84"
-source = "git+https://github.com/rustwasm/wasm-bindgen.git?rev=b41de3f22fc2427babe3a7d4184c369651452136#b41de3f22fc2427babe3a7d4184c369651452136"
+source = "git+https://github.com/rustwasm/wasm-bindgen.git?rev=27173549f6a196a869cec525f8f87adec55c738c#27173549f6a196a869cec525f8f87adec55c738c"
 dependencies = [
  "bumpalo",
  "log",
  "once_cell",
  "proc-macro2",
  "quote",
- "syn 2.0.12",
+ "syn",
  "wasm-bindgen-shared",
 ]
 
 [[package]]
 name = "wasm-bindgen-futures"
 version = "0.4.34"
-source = "git+https://github.com/rustwasm/wasm-bindgen.git?rev=b41de3f22fc2427babe3a7d4184c369651452136#b41de3f22fc2427babe3a7d4184c369651452136"
+source = "git+https://github.com/rustwasm/wasm-bindgen.git?rev=27173549f6a196a869cec525f8f87adec55c738c#27173549f6a196a869cec525f8f87adec55c738c"
 dependencies = [
  "cfg-if",
  "js-sys",
@@ -979,7 +967,7 @@ dependencies = [
 [[package]]
 name = "wasm-bindgen-macro"
 version = "0.2.84"
-source = "git+https://github.com/rustwasm/wasm-bindgen.git?rev=b41de3f22fc2427babe3a7d4184c369651452136#b41de3f22fc2427babe3a7d4184c369651452136"
+source = "git+https://github.com/rustwasm/wasm-bindgen.git?rev=27173549f6a196a869cec525f8f87adec55c738c#27173549f6a196a869cec525f8f87adec55c738c"
 dependencies = [
  "quote",
  "wasm-bindgen-macro-support",
@@ -988,11 +976,11 @@ dependencies = [
 [[package]]
 name = "wasm-bindgen-macro-support"
 version = "0.2.84"
-source = "git+https://github.com/rustwasm/wasm-bindgen.git?rev=b41de3f22fc2427babe3a7d4184c369651452136#b41de3f22fc2427babe3a7d4184c369651452136"
+source = "git+https://github.com/rustwasm/wasm-bindgen.git?rev=27173549f6a196a869cec525f8f87adec55c738c#27173549f6a196a869cec525f8f87adec55c738c"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.12",
+ "syn",
  "wasm-bindgen-backend",
  "wasm-bindgen-shared",
 ]
@@ -1000,12 +988,12 @@ dependencies = [
 [[package]]
 name = "wasm-bindgen-shared"
 version = "0.2.84"
-source = "git+https://github.com/rustwasm/wasm-bindgen.git?rev=b41de3f22fc2427babe3a7d4184c369651452136#b41de3f22fc2427babe3a7d4184c369651452136"
+source = "git+https://github.com/rustwasm/wasm-bindgen.git?rev=27173549f6a196a869cec525f8f87adec55c738c#27173549f6a196a869cec525f8f87adec55c738c"
 
 [[package]]
 name = "web-sys"
 version = "0.3.61"
-source = "git+https://github.com/rustwasm/wasm-bindgen.git?rev=b41de3f22fc2427babe3a7d4184c369651452136#b41de3f22fc2427babe3a7d4184c369651452136"
+source = "git+https://github.com/rustwasm/wasm-bindgen.git?rev=27173549f6a196a869cec525f8f87adec55c738c#27173549f6a196a869cec525f8f87adec55c738c"
 dependencies = [
  "js-sys",
  "wasm-bindgen",
@@ -1136,7 +1124,7 @@ dependencies = [
  "proc-macro-error",
  "proc-macro2",
  "quote",
- "syn 1.0.107",
+ "syn",
 ]
 
 [[package]]
