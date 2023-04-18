@@ -7,7 +7,7 @@ use yew::TargetCast;
 use yew::{html, Component, Context, Html};
 use yew_webtransport::webtransport::{WebTransportService, WebTransportStatus, WebTransportTask};
 
-const DEFAULT_URL: &str = "https://echo.webtransport.day";
+const DEFAULT_URL: &str = std::env!("WS_URL");
 
 pub enum WsAction {
     Connect,

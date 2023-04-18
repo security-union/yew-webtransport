@@ -231,7 +231,8 @@ impl WebTransportService {
         closure.forget();
 
         let notify = notification.clone();
-        let closed_closure = Closure::wrap(Box::new(move |_| {
+        let closed_closure = Closure::wrap(Box::new(move |e| {
+            log!("WebTransport closed: ", e);
             notify.emit(WebTransportStatus::Closed);
         }) as Box<dyn FnMut(JsValue)>);
         let closed = transport.closed().then(&closed_closure);
