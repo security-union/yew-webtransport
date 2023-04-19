@@ -14,7 +14,7 @@ serde_json = "1.0"
 yew-webtransport = { path = "../../"}
 gloo-console = "0.2.3"
 chrono = "0.4.19"
-web-sys = {version = "0.3.61", features = [ "WebSocket", "WebTransport", "WritableStream", "ReadableStream", "ReadableStreamDefaultReader", "ReadableStreamReadResult", "WebTransportSendStream", "WritableStreamDefaultWriter", "WebTransportDatagramDuplexStream", "WebTransportCloseInfo", "WebTransportBidirectionalStream", "WebTransportReceiveStream"]}
+web-sys = {version = "0.3.61", features = ["WebSocket", "WebTransport", "WritableStream", "ReadableStream", "ReadableStreamDefaultReader", "ReadableStreamReadResult", "WebTransportSendStream", "WritableStreamDefaultWriter", "WebTransportDatagramDuplexStream", "WebTransportCloseInfo", "WebTransportBidirectionalStream", "WebTransportReceiveStream"]}
 # TODO: Remove this after web-sys is released
 [patch.crates-io]
 wasm-bindgen-shared = { git= "https://github.com/rustwasm/wasm-bindgen.git", rev = "27173549f6a196a869cec525f8f87adec55c738c" }
