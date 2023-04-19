@@ -145,7 +145,7 @@ impl WebTransportService {
             transport.clone(), 
             transport.incoming_bidirectional_streams(), 
             on_bidirectional_stream
-    );
+        );
 
         Ok(WebTransportTask::new(transport, notification, listeners))
     }
