@@ -25,7 +25,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
  */
 use anyhow::{anyhow, Error};
-use futures::future;
 use std::{fmt, rc::Rc};
 use thiserror::Error as ThisError;
 use wasm_bindgen_futures::JsFuture;
@@ -154,9 +153,8 @@ impl WebTransportService {
             incoming_streams.get_reader().unchecked_into();
         wasm_bindgen_futures::spawn_local(async move {
             loop {
-                log!("got unidirectional stream reader");
                 let read_result = JsFuture::from(read_result.read()).await;
-                log!("got unidirectional stream");
+                log!("passed read_result");
                 match read_result {
                     Err(e) => {
                         log!("Failed to read incoming unidirectional streams {e:?}");
@@ -168,15 +166,17 @@ impl WebTransportService {
                         break;
                     }
                     Ok(result) => {
+                        log!("got result");
                         let done = Reflect::get(&result, &JsString::from("done"))
                             .unwrap()
                             .unchecked_into::<Boolean>();
                         if done.is_truthy() {
+                            log!("reading is over");
                             break;
                         }
                         let value: Uint8Array = Reflect::get(&result, &JsString::from("value"))
-                            .unwrap()
-                            .unchecked_into();
+                        .unwrap()
+                        .unchecked_into();
                         process_binary(&value, &callback);
                     }
                 }
