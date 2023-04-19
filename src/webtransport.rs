@@ -36,7 +36,7 @@ use js_sys::{Boolean, JsString, Promise, Reflect, Uint8Array};
 use wasm_bindgen::{prelude::Closure, JsCast, JsValue};
 use web_sys::{
     ReadableStream, ReadableStreamDefaultReader, WebTransport, WebTransportBidirectionalStream,
-    WebTransportCloseInfo, WebTransportDatagramDuplexStream, WritableStream,
+    WebTransportCloseInfo, WebTransportDatagramDuplexStream, WritableStream, WebTransportReceiveStream
 };
 
 /// Represents formatting errors.
@@ -123,7 +123,8 @@ impl WebTransportService {
     pub fn connect(
         url: &str,
         on_datagram: Callback<Vec<u8>>,
-        on_unidirectional_stream: Callback<Vec<u8>>,
+        on_unidirectional_stream: Callback<WebTransportReceiveStream>,
+        on_bidirectional_stream: Callback<WebTransportBidirectionalStream>,
         notification: Callback<WebTransportStatus>,
     ) -> Result<WebTransportTask, WebTransportError> {
         let ConnectCommon(transport, listeners) = Self::connect_common(url, &notification)?;
@@ -140,21 +141,27 @@ impl WebTransportService {
             on_unidirectional_stream,
         );
 
+        Self::start_listening_incoming_bidirectional_streams(
+            transport.clone(), 
+            transport.incoming_bidirectional_streams(), 
+            on_bidirectional_stream
+    );
+
         Ok(WebTransportTask::new(transport, notification, listeners))
     }
 
     fn start_listening_incoming_unidirectional_streams(
         transport: Rc<WebTransport>,
         incoming_streams: ReadableStream,
-        callback: Callback<Vec<u8>>,
+        callback: Callback<WebTransportReceiveStream>,
     ) {
-        log!("waiting for unidirectional stream");
+        log!("waiting for unidirectional streams");
         let read_result: ReadableStreamDefaultReader =
             incoming_streams.get_reader().unchecked_into();
         wasm_bindgen_futures::spawn_local(async move {
             loop {
                 let read_result = JsFuture::from(read_result.read()).await;
-                log!("passed read_result");
+                log!("got unidirectional stream");
                 match read_result {
                     Err(e) => {
                         log!("Failed to read incoming unidirectional streams {e:?}");
@@ -170,14 +177,14 @@ impl WebTransportService {
                         let done = Reflect::get(&result, &JsString::from("done"))
                             .unwrap()
                             .unchecked_into::<Boolean>();
+                        if let Ok(value) = Reflect::get(&result, &JsString::from("value")) {
+                            let value: WebTransportReceiveStream = value.unchecked_into();
+                            callback.emit(value);
+                        }
                         if done.is_truthy() {
                             log!("reading is over");
                             break;
-                        }
-                        let value: Uint8Array = Reflect::get(&result, &JsString::from("value"))
-                        .unwrap()
-                        .unchecked_into();
-                        process_binary(&value, &callback);
+                        }     
                     }
                 }
             }
@@ -218,6 +225,47 @@ impl WebTransportService {
         });
     }
 
+    // TODO: untested code.
+    fn start_listening_incoming_bidirectional_streams(
+        transport: Rc<WebTransport>,
+        streams: ReadableStream,
+        callback: Callback<WebTransportBidirectionalStream>,
+    ) {
+        log!("waiting for bidirectional streams");
+        let read_result: ReadableStreamDefaultReader =
+            streams.get_reader().unchecked_into();
+        wasm_bindgen_futures::spawn_local(async move {
+            loop {
+                let read_result = JsFuture::from(read_result.read()).await;
+                log!("got bidirectional stream");
+                match read_result {
+                    Err(e) => {
+                        log!("Failed to read incoming unidirectional streams {e:?}");
+                        let mut reason = WebTransportCloseInfo::default();
+                        reason.reason(
+                            format!("Failed to read incoming unidirectional strams {e:?}").as_str(),
+                        );
+                        transport.close_with_close_info(&reason);
+                        break;
+                    }
+                    Ok(result) => {
+                        log!("got result");
+                        let done = Reflect::get(&result, &JsString::from("done"))
+                            .unwrap()
+                            .unchecked_into::<Boolean>();
+                        if let Ok(value) = Reflect::get(&result, &JsString::from("value")) {
+                            let value: WebTransportBidirectionalStream = value.unchecked_into();
+                            callback.emit(value);
+                        }
+                        if done.is_truthy() {
+                            log!("reading is over");
+                            break;
+                        }     
+                    }
+                }
+            }
+        });
+    }
     fn connect_common(
         url: &str,
         notification: &Callback<WebTransportStatus>,
@@ -330,7 +378,7 @@ impl WebTransportTask {
                             Err(e) => {
                                 let mut reason = WebTransportCloseInfo::default();
                                 reason.reason(
-                                    format!("Failed to read incoming datagrams {e:?}").as_str(),
+                                    format!("Failed to read incoming stream {e:?}").as_str(),
                                 );
                                 transport.close_with_close_info(&reason);
                                 break;
