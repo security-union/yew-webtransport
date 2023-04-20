@@ -225,7 +225,6 @@ impl WebTransportService {
         });
     }
 
-    // TODO: untested code.
     fn start_listening_incoming_bidirectional_streams(
         transport: Rc<WebTransport>,
         streams: ReadableStream,
@@ -266,6 +265,7 @@ impl WebTransportService {
             }
         });
     }
+    
     fn connect_common(
         url: &str,
         notification: &Callback<WebTransportStatus>,
@@ -299,7 +299,7 @@ impl WebTransportService {
 }
 struct ConnectCommon(WebTransport, [Promise; 2]);
 
-fn process_binary(bytes: &Uint8Array, callback: &Callback<Vec<u8>>) {
+pub fn process_binary(bytes: &Uint8Array, callback: &Callback<Vec<u8>>) {
     let data = bytes.to_vec();
     callback.emit(data);
 }

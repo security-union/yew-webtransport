@@ -1,13 +1,20 @@
 use chrono::Local;
 use gloo_console::log;
+use js_sys::{Boolean, JsString, Promise, Reflect, Uint8Array};
+use wasm_bindgen::{prelude::Closure, JsCast, JsValue};
+use wasm_bindgen_futures::JsFuture;
 use web_sys::HtmlInputElement;
 use web_sys::HtmlTextAreaElement;
 use web_sys::KeyboardEvent;
+use web_sys::ReadableStreamDefaultReader;
 use web_sys::WebTransportBidirectionalStream;
+use web_sys::WebTransportCloseInfo;
 use web_sys::WebTransportReceiveStream;
+use yew::callback;
 use yew::prelude::*;
 use yew::TargetCast;
 use yew::{html, Component, Context, Html};
+use yew_webtransport::webtransport::process_binary;
 use yew_webtransport::webtransport::{WebTransportService, WebTransportStatus, WebTransportTask};
 
 const DEFAULT_URL: &str = std::env!("WS_URL");
@@ -182,12 +189,76 @@ impl Component for Model {
             }
             Msg::OnBidiStream(stream) => {
                 // TODO: Read from the stream and do something useful with the data.
-                log!("OnBidiStream: ", stream);
+                log!("OnBidiStream: ", &stream);
+                let callback = ctx
+                    .link()
+                    .callback(|d| Msg::OnMessage(d, WebTransportMessageType::BidirectionalStream));
+                let readable: ReadableStreamDefaultReader =
+                    stream.readable().get_reader().unchecked_into();
+                wasm_bindgen_futures::spawn_local(async move {
+                    loop {
+                        let read_result = JsFuture::from(readable.read()).await;
+                        match read_result {
+                            Err(e) => {
+                                let mut reason = WebTransportCloseInfo::default();
+                                reason.reason(
+                                    format!("Failed to read incoming datagrams {e:?}").as_str(),
+                                );
+                                break;
+                            }
+                            Ok(result) => {
+                                let done = Reflect::get(&result, &JsString::from("done"))
+                                    .unwrap()
+                                    .unchecked_into::<Boolean>();
+                                if done.is_truthy() {
+                                    break;
+                                }
+                                let value: Uint8Array =
+                                    Reflect::get(&result, &JsString::from("value"))
+                                        .unwrap()
+                                        .unchecked_into();
+                                process_binary(&value, &callback);
+                            }
+                        }
+                    }
+                });
                 true
             }
             Msg::OnUniStream(stream) => {
                 // TODO: Read from the stream and do something useful with the data.
-                log!("OnUniStream: ", stream);
+                log!("OnUniStream: ", &stream);
+                let incoming_datagrams: ReadableStreamDefaultReader =
+                    stream.get_reader().unchecked_into();
+                let callback = ctx
+                    .link()
+                    .callback(|d| Msg::OnMessage(d, WebTransportMessageType::UnidirectionalStream));
+                wasm_bindgen_futures::spawn_local(async move {
+                    loop {
+                        let read_result = JsFuture::from(incoming_datagrams.read()).await;
+                        match read_result {
+                            Err(e) => {
+                                let mut reason = WebTransportCloseInfo::default();
+                                reason.reason(
+                                    format!("Failed to read incoming datagrams {e:?}").as_str(),
+                                );
+                                break;
+                            }
+                            Ok(result) => {
+                                let done = Reflect::get(&result, &JsString::from("done"))
+                                    .unwrap()
+                                    .unchecked_into::<Boolean>();
+                                if done.is_truthy() {
+                                    break;
+                                }
+                                let value: Uint8Array =
+                                    Reflect::get(&result, &JsString::from("value"))
+                                        .unwrap()
+                                        .unchecked_into();
+                                process_binary(&value, &callback);
+                            }
+                        }
+                    }
+                });
                 true
             }
         }
