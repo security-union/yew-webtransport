@@ -1,20 +1,30 @@
 use chrono::Local;
+use gloo_console::log;
+use js_sys::{Boolean, JsString, Promise, Reflect, Uint8Array};
+use wasm_bindgen::{prelude::Closure, JsCast, JsValue};
+use wasm_bindgen_futures::JsFuture;
 use web_sys::HtmlInputElement;
 use web_sys::HtmlTextAreaElement;
 use web_sys::KeyboardEvent;
+use web_sys::ReadableStreamDefaultReader;
+use web_sys::WebTransportBidirectionalStream;
+use web_sys::WebTransportCloseInfo;
+use web_sys::WebTransportReceiveStream;
+use yew::callback;
 use yew::prelude::*;
 use yew::TargetCast;
 use yew::{html, Component, Context, Html};
+use yew_webtransport::webtransport::process_binary;
 use yew_webtransport::webtransport::{WebTransportService, WebTransportStatus, WebTransportTask};
 
-const DEFAULT_URL: &str = "https://echo.webtransport.day";
+const DEFAULT_URL: &str = std::env!("WS_URL");
 
 pub enum WsAction {
     Connect,
     SendData(),
     SetText(String),
-    SetMessageType(WebTransportMessageType),
     SetUrl(String),
+    SetMessageType(WebTransportMessageType),
     Log(String),
     Disconnect,
     Lost,
@@ -22,7 +32,10 @@ pub enum WsAction {
 
 pub enum Msg {
     WsAction(WsAction),
-    WsReady(Vec<u8>, WebTransportMessageType),
+    OnDatagram(Vec<u8>),
+    OnUniStream(WebTransportReceiveStream),
+    OnBidiStream(WebTransportBidirectionalStream),
+    OnMessage(Vec<u8>, WebTransportMessageType),
 }
 
 impl From<WsAction> for Msg {
@@ -67,12 +80,9 @@ impl Component for Model {
         match msg {
             Msg::WsAction(action) => match action {
                 WsAction::Connect => {
-                    let on_datagram = ctx
-                        .link()
-                        .callback(|d| Msg::WsReady(d, WebTransportMessageType::Datagram));
-                    let on_unidirectional_stream = ctx.link().callback(|d| {
-                        Msg::WsReady(d, WebTransportMessageType::UnidirectionalStream)
-                    });
+                    let on_datagram = ctx.link().callback(|d| Msg::OnDatagram(d));
+                    let on_unidirectional_stream = ctx.link().callback(|d| Msg::OnUniStream(d));
+                    let on_bidirectional_stream = ctx.link().callback(|d| Msg::OnBidiStream(d));
                     let notification = ctx.link().batch_callback(|status| match status {
                         WebTransportStatus::Opened => {
                             Some(WsAction::Log(String::from("Connected")).into())
@@ -86,6 +96,7 @@ impl Component for Model {
                         &endpoint,
                         on_datagram,
                         on_unidirectional_stream,
+                        on_bidirectional_stream,
                         notification,
                     );
                     self.transport = match task {
@@ -118,7 +129,7 @@ impl Component for Model {
                             }
                             WebTransportMessageType::BidirectionalStream => {
                                 let on_bidirectional_stream = ctx.link().callback(|d| {
-                                    Msg::WsReady(d, WebTransportMessageType::BidirectionalStream)
+                                    Msg::OnMessage(d, WebTransportMessageType::BidirectionalStream)
                                 });
                                 WebTransportTask::send_bidirectional_stream(
                                     transport.transport.clone(),
@@ -163,11 +174,91 @@ impl Component for Model {
                     true
                 }
             },
-            Msg::WsReady(response, message_type) => {
+            Msg::OnMessage(response, message_type) => {
                 let data = String::from_utf8(response).unwrap();
                 ctx.link().send_message(WsAction::Log(format!(
                     "We received {data:?} through {message_type:?}"
                 )));
+                true
+            }
+            Msg::OnDatagram(datagram) => {
+                // With datagrams there's no need to read from a stream, so we just rebroadcast another message.
+                ctx.link()
+                    .send_message(Msg::OnMessage(datagram, WebTransportMessageType::Datagram));
+                false
+            }
+            Msg::OnBidiStream(stream) => {
+                // TODO: Read from the stream and do something useful with the data.
+                log!("OnBidiStream: ", &stream);
+                let callback = ctx
+                    .link()
+                    .callback(|d| Msg::OnMessage(d, WebTransportMessageType::BidirectionalStream));
+                let readable: ReadableStreamDefaultReader =
+                    stream.readable().get_reader().unchecked_into();
+                wasm_bindgen_futures::spawn_local(async move {
+                    loop {
+                        let read_result = JsFuture::from(readable.read()).await;
+                        match read_result {
+                            Err(e) => {
+                                let mut reason = WebTransportCloseInfo::default();
+                                reason.reason(
+                                    format!("Failed to read incoming datagrams {e:?}").as_str(),
+                                );
+                                break;
+                            }
+                            Ok(result) => {
+                                let done = Reflect::get(&result, &JsString::from("done"))
+                                    .unwrap()
+                                    .unchecked_into::<Boolean>();
+                                if done.is_truthy() {
+                                    break;
+                                }
+                                let value: Uint8Array =
+                                    Reflect::get(&result, &JsString::from("value"))
+                                        .unwrap()
+                                        .unchecked_into();
+                                process_binary(&value, &callback);
+                            }
+                        }
+                    }
+                });
+                true
+            }
+            Msg::OnUniStream(stream) => {
+                // TODO: Read from the stream and do something useful with the data.
+                log!("OnUniStream: ", &stream);
+                let incoming_datagrams: ReadableStreamDefaultReader =
+                    stream.get_reader().unchecked_into();
+                let callback = ctx
+                    .link()
+                    .callback(|d| Msg::OnMessage(d, WebTransportMessageType::UnidirectionalStream));
+                wasm_bindgen_futures::spawn_local(async move {
+                    loop {
+                        let read_result = JsFuture::from(incoming_datagrams.read()).await;
+                        match read_result {
+                            Err(e) => {
+                                let mut reason = WebTransportCloseInfo::default();
+                                reason.reason(
+                                    format!("Failed to read incoming datagrams {e:?}").as_str(),
+                                );
+                                break;
+                            }
+                            Ok(result) => {
+                                let done = Reflect::get(&result, &JsString::from("done"))
+                                    .unwrap()
+                                    .unchecked_into::<Boolean>();
+                                if done.is_truthy() {
+                                    break;
+                                }
+                                let value: Uint8Array =
+                                    Reflect::get(&result, &JsString::from("value"))
+                                        .unwrap()
+                                        .unchecked_into();
+                                process_binary(&value, &callback);
+                            }
+                        }
+                    }
+                });
                 true
             }
         }

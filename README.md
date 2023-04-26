@@ -27,5 +27,5 @@ Until wasm-bindgen releases my changes to crates.io you will have to install was
 cargo install -f wasm-bindgen-cli --git https://github.com/rustwasm/wasm-bindgen.git  --rev 27173549f6a196a869cec525f8f87adec55c738c
 ```
 cd examples/webtransport-demo
-RUSTFLAGS=--cfg=web_sys_unstable_apis trunk serve
+ WS_URL=https://127.0.0.1:4433 RUSTFLAGS=--cfg=web_sys_unstable_apis trunk serve 
 ```
