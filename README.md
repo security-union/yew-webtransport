@@ -1,5 +1,8 @@
 # yew-webtransport
 
+[![crates.io](https://img.shields.io/crates/v/yew-webtransport.svg)](https://crates.io/crates/yew-webtransport)
+[![docs.rs](https://docs.rs/yew-webtransport/badge.svg)](https://docs.rs/yew-webtransport)
+
 ## Summary
 
 Access WebTransport in Yew apps using wasm-bindgen https://github.com/rustwasm/wasm-bindgen/pull/3344
@@ -22,10 +25,6 @@ The website is live at https://security-union.github.io/yew-webtransport/
 
 If you want to run it locally, you have to set RUSTFLAGS
 
-Until wasm-bindgen releases my changes to crates.io you will have to install wasm-bindgen-cli by hand:
-```
-cargo install -f wasm-bindgen-cli --git https://github.com/rustwasm/wasm-bindgen.git  --rev 27173549f6a196a869cec525f8f87adec55c738c
-```
 cd examples/webtransport-demo
  WS_URL=https://127.0.0.1:4433 RUSTFLAGS=--cfg=web_sys_unstable_apis trunk serve 
 ```
