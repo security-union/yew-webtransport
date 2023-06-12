@@ -1,6 +1,6 @@
 [package]
 name = "yew-webtransport"
-version = "0.2.1"
+version = "0.2.2"
 edition = "2021"
 repository = "https://github.com/security-union/yew-webtransport.git"
 description = "WebTransport is an API offering low-latency, bidirectional, client-server messaging."
@@ -11,10 +11,10 @@ license = "MIT"
 [dependencies]
 yew = "0.20.0"
 wasm-bindgen-futures = "0.4.34"
-wasm-bindgen = { git= "https://github.com/rustwasm/wasm-bindgen.git", rev = "27173549f6a196a869cec525f8f87adec55c738c" }
+wasm-bindgen = "0.2.87"
 futures = "0.3.24"
 futures-util = "0.3.24"
-js-sys = { version = "0.3.61", optional = false }
+js-sys = { version = "0.3.64", optional = false }
 thiserror = "1.0"
 anyhow = "1"
 serde = "1"
@@ -22,12 +22,5 @@ serde_derive = "1"
 serde_json = "1.0"
 gloo = { version = "0.2.1", optional = false }
 gloo-console = "0.2.1"
-web-sys = {version = "0.3.61", features = [ "WebSocket", "WebTransport", "WritableStream", "ReadableStream", "ReadableStreamDefaultReader", "ReadableStreamReadResult", "WebTransportSendStream", "WritableStreamDefaultWriter", "WebTransportDatagramDuplexStream", "WebTransportCloseInfo", "WebTransportBidirectionalStream", "WebTransportReceiveStream"]}
+web-sys = {version = "0.3.64", features = [ "WebSocket", "WebTransport", "WritableStream", "ReadableStream", "ReadableStreamDefaultReader", "ReadableStreamReadResult", "WebTransportSendStream", "WritableStreamDefaultWriter", "WebTransportDatagramDuplexStream", "WebTransportCloseInfo", "WebTransportBidirectionalStream", "WebTransportReceiveStream"]}
 
-# TODO: Remove this after web-sys is released
-[patch.crates-io]
-wasm-bindgen-shared = { git= "https://github.com/rustwasm/wasm-bindgen.git", rev = "27173549f6a196a869cec525f8f87adec55c738c" }
-js-sys = { git= "https://github.com/rustwasm/wasm-bindgen.git", rev = "27173549f6a196a869cec525f8f87adec55c738c" }
-web-sys = { git= "https://github.com/rustwasm/wasm-bindgen.git", rev = "27173549f6a196a869cec525f8f87adec55c738c" }
-wasm-bindgen-futures = { git= "https://github.com/rustwasm/wasm-bindgen.git", rev = "27173549f6a196a869cec525f8f87adec55c738c" }
-wasm-bindgen = { git= "https://github.com/rustwasm/wasm-bindgen.git", rev = "27173549f6a196a869cec525f8f87adec55c738c" }

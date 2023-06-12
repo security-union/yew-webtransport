@@ -36,7 +36,8 @@ use js_sys::{Boolean, JsString, Promise, Reflect, Uint8Array};
 use wasm_bindgen::{prelude::Closure, JsCast, JsValue};
 use web_sys::{
     ReadableStream, ReadableStreamDefaultReader, WebTransport, WebTransportBidirectionalStream,
-    WebTransportCloseInfo, WebTransportDatagramDuplexStream, WritableStream, WebTransportReceiveStream
+    WebTransportCloseInfo, WebTransportDatagramDuplexStream, WebTransportReceiveStream,
+    WritableStream,
 };
 
 /// Represents formatting errors.
@@ -142,9 +143,9 @@ impl WebTransportService {
         );
 
         Self::start_listening_incoming_bidirectional_streams(
-            transport.clone(), 
-            transport.incoming_bidirectional_streams(), 
-            on_bidirectional_stream
+            transport.clone(),
+            transport.incoming_bidirectional_streams(),
+            on_bidirectional_stream,
         );
 
         Ok(WebTransportTask::new(transport, notification, listeners))
@@ -184,7 +185,7 @@ impl WebTransportService {
                         if done.is_truthy() {
                             log!("reading is over");
                             break;
-                        }     
+                        }
                     }
                 }
             }
@@ -231,8 +232,7 @@ impl WebTransportService {
         callback: Callback<WebTransportBidirectionalStream>,
     ) {
         log!("waiting for bidirectional streams");
-        let read_result: ReadableStreamDefaultReader =
-            streams.get_reader().unchecked_into();
+        let read_result: ReadableStreamDefaultReader = streams.get_reader().unchecked_into();
         wasm_bindgen_futures::spawn_local(async move {
             loop {
                 let read_result = JsFuture::from(read_result.read()).await;
@@ -259,13 +259,13 @@ impl WebTransportService {
                         if done.is_truthy() {
                             log!("reading is over");
                             break;
-                        }     
+                        }
                     }
                 }
             }
         });
     }
-    
+
     fn connect_common(
         url: &str,
         notification: &Callback<WebTransportStatus>,
