@@ -16,6 +16,6 @@ jobs:
       - uses: dtolnay/rust-toolchain@1.66
         with:
           components: clippy, rustfmt
-      - run: cargo clippy -- --deny warnings
-      - run: cargo fmt --check
-      - run: cargo test 
+      - run: RUSTFLAGS=--cfg=web_sys_unstable_apis  cargo clippy -- --deny warnings
+      - run: RUSTFLAGS=--cfg=web_sys_unstable_apis  cargo fmt --check
+      - run: RUSTFLAGS=--cfg=web_sys_unstable_apis  cargo test 
