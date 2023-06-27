@@ -89,6 +89,7 @@ pub enum WebTransportError {
 #[must_use = "the connection will be closed when the task is dropped"]
 pub struct WebTransportTask {
     pub transport: Rc<WebTransport>,
+    #[allow(dead_code)]
     notification: Callback<WebTransportStatus>,
     #[allow(dead_code)]
     listeners: [Promise; 2],
