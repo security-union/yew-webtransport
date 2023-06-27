@@ -162,7 +162,6 @@ impl WebTransportService {
         wasm_bindgen_futures::spawn_local(async move {
             loop {
                 let read_result = JsFuture::from(read_result.read()).await;
-                log!("got unidirectional stream");
                 match read_result {
                     Err(e) => {
                         log!("Failed to read incoming unidirectional streams {e:?}");
@@ -174,7 +173,6 @@ impl WebTransportService {
                         break;
                     }
                     Ok(result) => {
-                        log!("got result");
                         let done = Reflect::get(&result, &JsString::from("done"))
                             .unwrap()
                             .unchecked_into::<Boolean>();
@@ -183,7 +181,6 @@ impl WebTransportService {
                             callback.emit(value);
                         }
                         if done.is_truthy() {
-                            log!("reading is over");
                             break;
                         }
                     }
@@ -236,7 +233,6 @@ impl WebTransportService {
         wasm_bindgen_futures::spawn_local(async move {
             loop {
                 let read_result = JsFuture::from(read_result.read()).await;
-                log!("got bidirectional stream");
                 match read_result {
                     Err(e) => {
                         log!("Failed to read incoming unidirectional streams {e:?}");
@@ -248,7 +244,6 @@ impl WebTransportService {
                         break;
                     }
                     Ok(result) => {
-                        log!("got result");
                         let done = Reflect::get(&result, &JsString::from("done"))
                             .unwrap()
                             .unchecked_into::<Boolean>();
@@ -257,7 +252,6 @@ impl WebTransportService {
                             callback.emit(value);
                         }
                         if done.is_truthy() {
-                            log!("reading is over");
                             break;
                         }
                     }
