@@ -1,7 +1,7 @@
 use chrono::Local;
 use gloo_console::log;
 use js_sys::{Boolean, JsString, Reflect, Uint8Array};
-use wasm_bindgen::JsCast;
+use wasm_bindgen::{JsCast};
 use wasm_bindgen_futures::JsFuture;
 use web_sys::HtmlInputElement;
 use web_sys::HtmlTextAreaElement;
