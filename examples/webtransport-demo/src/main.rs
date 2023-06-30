@@ -1,7 +1,7 @@
 use chrono::Local;
 use gloo_console::log;
 use js_sys::{Boolean, JsString, Reflect, Uint8Array};
-use wasm_bindgen::{JsCast};
+use wasm_bindgen::JsCast;
 use wasm_bindgen_futures::JsFuture;
 use web_sys::HtmlInputElement;
 use web_sys::HtmlTextAreaElement;
@@ -27,7 +27,8 @@ pub enum WsAction {
     SetMessageType(WebTransportMessageType),
     Log(String),
     Disconnect,
-    Lost,
+    Lost(String),
+    Connected,
 }
 
 pub enum Msg {
@@ -55,6 +56,7 @@ pub enum WebTransportMessageType {
 pub struct Model {
     pub fetching: bool,
     pub transport: Option<WebTransportTask>,
+    pub connected: bool,
     pub log: Vec<String>,
     pub endpoint: String,
     pub text: String,
@@ -73,6 +75,7 @@ impl Component for Model {
             endpoint: DEFAULT_URL.to_string(),
             text: "".to_string(),
             message_type: WebTransportMessageType::Datagram,
+            connected: false,
         }
     }
 
@@ -84,11 +87,9 @@ impl Component for Model {
                     let on_unidirectional_stream = ctx.link().callback(Msg::OnUniStream);
                     let on_bidirectional_stream = ctx.link().callback(Msg::OnBidiStream);
                     let notification = ctx.link().batch_callback(|status| match status {
-                        WebTransportStatus::Opened => {
-                            Some(WsAction::Log(String::from("Connected")).into())
-                        }
-                        WebTransportStatus::Closed | WebTransportStatus::Error => {
-                            Some(WsAction::Lost.into())
+                        WebTransportStatus::Opened => Some(WsAction::Connected.into()),
+                        WebTransportStatus::Closed(reason) | WebTransportStatus::Error(reason) => {
+                            Some(WsAction::Lost(reason).into())
                         }
                     });
                     let endpoint = self.endpoint.clone();
@@ -167,10 +168,17 @@ impl Component for Model {
                     self.log.splice(0..0, vec![text]);
                     true
                 }
-                WsAction::Lost => {
+                WsAction::Connected => {
+                    self.connected = true;
+                    ctx.link()
+                        .send_message(WsAction::Log("Connected".to_string()));
+                    true
+                }
+                WsAction::Lost(reason) => {
+                    self.connected = false;
                     self.transport = None;
                     ctx.link()
-                        .send_message(WsAction::Log(String::from("Connection lost")));
+                        .send_message(WsAction::Log(format!("Connection lost ({})", reason)));
                     true
                 }
             },

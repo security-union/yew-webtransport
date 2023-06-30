@@ -72,9 +72,9 @@ pub enum WebTransportStatus {
     /// Fired when a WebTransport connection has opened.
     Opened,
     /// Fired when a WebTransport connection has closed.
-    Closed,
+    Closed(String),
     /// Fired when a WebTransport connection has failed.
-    Error,
+    Error(String),
 }
 
 #[derive(Clone, Debug, PartialEq, thiserror::Error)]
@@ -165,10 +165,11 @@ impl WebTransportService {
                 let read_result = JsFuture::from(read_result.read()).await;
                 match read_result {
                     Err(e) => {
-                        log!("Failed to read incoming unidirectional streams {e:?}");
+                        log!("Failed to read incoming unidirectional streams", &e);
                         let mut reason = WebTransportCloseInfo::default();
                         reason.reason(
-                            format!("Failed to read incoming unidirectional strams {e:?}").as_str(),
+                            format!("Failed to read incoming unidirectional streams {e:?}")
+                                .as_str(),
                         );
                         transport.close_with_close_info(&reason);
                         break;
@@ -272,17 +273,18 @@ impl WebTransportService {
 
         let notify = notification.clone();
 
-        let closure = Closure::wrap(Box::new(move |_| {
+        let opened_closure = Closure::wrap(Box::new(move |_| {
             notify.emit(WebTransportStatus::Opened);
         }) as Box<dyn FnMut(JsValue)>);
-        let ready = transport.ready().then(&closure);
-        closure.forget();
-
         let notify = notification.clone();
-        let closed_closure = Closure::wrap(Box::new(move |e| {
-            log!("WebTransport closed: ", e);
-            notify.emit(WebTransportStatus::Closed);
+        let closed_closure = Closure::wrap(Box::new(move |e: JsValue| {
+            notify.emit(WebTransportStatus::Closed(format!("{e:?}")));
         }) as Box<dyn FnMut(JsValue)>);
+        let ready = transport
+            .ready()
+            .then(&opened_closure)
+            .catch(&closed_closure);
+        opened_closure.forget();
         let closed = transport.closed().then(&closed_closure);
         closed_closure.forget();
 
