@@ -89,7 +89,8 @@ impl Component for Model {
                     let notification = ctx.link().batch_callback(|status| match status {
                         WebTransportStatus::Opened => Some(WsAction::Connected.into()),
                         WebTransportStatus::Closed(reason) | WebTransportStatus::Error(reason) => {
-                            Some(WsAction::Lost(reason).into())
+                            let formatted_reason = format!("{:?}", reason);
+                            Some(WsAction::Lost(formatted_reason).into())
                         }
                     });
                     let endpoint = self.endpoint.clone();

@@ -72,9 +72,9 @@ pub enum WebTransportStatus {
     /// Fired when a WebTransport connection has opened.
     Opened,
     /// Fired when a WebTransport connection has closed.
-    Closed(String),
+    Closed(JsValue),
     /// Fired when a WebTransport connection has failed.
-    Error(String),
+    Error(JsValue),
 }
 
 #[derive(Clone, Debug, PartialEq, thiserror::Error)]
@@ -157,7 +157,6 @@ impl WebTransportService {
         incoming_streams: ReadableStream,
         callback: Callback<WebTransportReceiveStream>,
     ) {
-        log!("waiting for unidirectional streams");
         let read_result: ReadableStreamDefaultReader =
             incoming_streams.get_reader().unchecked_into();
         wasm_bindgen_futures::spawn_local(async move {
@@ -233,17 +232,16 @@ impl WebTransportService {
         streams: ReadableStream,
         callback: Callback<WebTransportBidirectionalStream>,
     ) {
-        log!("waiting for bidirectional streams");
         let read_result: ReadableStreamDefaultReader = streams.get_reader().unchecked_into();
         wasm_bindgen_futures::spawn_local(async move {
             loop {
                 let read_result = JsFuture::from(read_result.read()).await;
                 match read_result {
                     Err(e) => {
-                        log!("Failed to read incoming unidirectional streams {e:?}");
                         let mut reason = WebTransportCloseInfo::default();
                         reason.reason(
-                            format!("Failed to read incoming unidirectional strams {e:?}").as_str(),
+                            format!("Failed to read incoming unidirectional streams {e:?}")
+                                .as_str(),
                         );
                         transport.close_with_close_info(&reason);
                         break;
@@ -284,7 +282,7 @@ impl WebTransportService {
         }) as Box<dyn FnMut(JsValue)>);
         let notify = notification.clone();
         let closed_closure = Closure::wrap(Box::new(move |e: JsValue| {
-            notify.emit(WebTransportStatus::Closed(format!("{e:?}")));
+            notify.emit(WebTransportStatus::Closed(e));
         }) as Box<dyn FnMut(JsValue)>);
         let ready = transport
             .ready()
