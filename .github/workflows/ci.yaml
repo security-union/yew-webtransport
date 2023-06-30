@@ -16,6 +16,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@1.70
         with:
           components: clippy, rustfmt
+      - run: rustup target add wasm32-unknown-unknown
       - run: RUSTFLAGS=--cfg=web_sys_unstable_apis  cargo clippy -- --deny warnings
       - run: RUSTFLAGS=--cfg=web_sys_unstable_apis  cargo fmt --check
       - run: RUSTFLAGS=--cfg=web_sys_unstable_apis  cargo test 
