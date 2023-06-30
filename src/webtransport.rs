@@ -179,6 +179,9 @@ impl WebTransportService {
                             .unwrap()
                             .unchecked_into::<Boolean>();
                         if let Ok(value) = Reflect::get(&result, &JsString::from("value")) {
+                            if value.is_undefined() {
+                                break;
+                            }
                             let value: WebTransportReceiveStream = value.unchecked_into();
                             callback.emit(value);
                         }
@@ -250,6 +253,9 @@ impl WebTransportService {
                             .unwrap()
                             .unchecked_into::<Boolean>();
                         if let Ok(value) = Reflect::get(&result, &JsString::from("value")) {
+                            if value.is_undefined() {
+                                break;
+                            }
                             let value: WebTransportBidirectionalStream = value.unchecked_into();
                             callback.emit(value);
                         }
