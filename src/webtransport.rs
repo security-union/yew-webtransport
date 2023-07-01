@@ -308,9 +308,9 @@ pub fn process_binary(bytes: &Uint8Array, callback: &Callback<Vec<u8>>) {
 impl WebTransportTask {
     /// Sends data to a WebTransport connection.
     pub fn send_datagram(transport: Rc<WebTransport>, data: Vec<u8>) {
-        let transport = transport;
         wasm_bindgen_futures::spawn_local(async move {
             let transport = transport.clone();
+            let transport_2 = transport.clone();
             let result: Result<(), anyhow::Error> = async move {
                 let stream = transport.datagrams();
                 let stream: WritableStream = stream.writable();
@@ -326,14 +326,15 @@ impl WebTransportTask {
             if let Err(e) = result {
                 let e = e.to_string();
                 log!("error: {}", e);
+                transport_2.close();
             }
         });
     }
 
     pub fn send_unidirectional_stream(transport: Rc<WebTransport>, data: Vec<u8>) {
-        let transport = transport;
         wasm_bindgen_futures::spawn_local(async move {
             let transport = transport.clone();
+            let transport_2 = transport.clone();
             let result: Result<(), anyhow::Error> = async move {
                 let stream = JsFuture::from(transport.create_unidirectional_stream()).await;
                 let stream: WritableStream =
@@ -353,6 +354,7 @@ impl WebTransportTask {
             if let Err(e) = result {
                 let e = e.to_string();
                 log!("error: {}", e);
+                transport_2.close();
             }
         });
     }
@@ -362,9 +364,9 @@ impl WebTransportTask {
         data: Vec<u8>,
         callback: Callback<Vec<u8>>,
     ) {
-        let transport = transport;
         wasm_bindgen_futures::spawn_local(async move {
             let transport = transport.clone();
+            let transport_2 = transport.clone();
             let result: Result<(), anyhow::Error> = async move {
                 let stream = JsFuture::from(transport.create_bidirectional_stream()).await;
                 let stream: WebTransportBidirectionalStream =
@@ -422,13 +424,8 @@ impl WebTransportTask {
             if let Err(e) = result {
                 let e = e.to_string();
                 log!("error: {}", e);
+                transport_2.close();
             }
         });
-    }
-}
-
-impl Drop for WebTransportTask {
-    fn drop(&mut self) {
-        self.transport.close();
     }
 }
