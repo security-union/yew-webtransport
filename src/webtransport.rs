@@ -429,3 +429,9 @@ impl WebTransportTask {
         });
     }
 }
+
+impl Drop for WebTransportTask {
+    fn drop(&mut self) {
+        self.transport.close();
+    }
+}
