@@ -325,6 +325,7 @@ impl WebTransportTask {
             let transport_2 = transport.clone();
             let result: Result<(), anyhow::Error> = async move {
                 let stream = transport.datagrams();
+                stream.lock().await;
                 let stream: WritableStream = stream.writable();
                 let writer = stream.get_writer().map_err(|e| anyhow!("{:?}", e))?;
                 let data = Uint8Array::from(data.as_slice());
@@ -337,7 +338,7 @@ impl WebTransportTask {
             .await;
             if let Err(e) = result {
                 let e = e.to_string();
-                log!("error: {}", e);
+                log!("error: ", e);
                 transport_2.close();
             }
         });
