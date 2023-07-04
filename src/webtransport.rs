@@ -28,7 +28,7 @@ use anyhow::{anyhow, Error};
 use std::{fmt, rc::Rc};
 use thiserror::Error as ThisError;
 use wasm_bindgen_futures::JsFuture;
-use yew::callback::{self, Callback};
+use yew::callback::Callback;
 use yew::platform::pinned::oneshot::channel;
 
 use gloo_console::log;
