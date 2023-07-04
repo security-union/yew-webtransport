@@ -331,8 +331,12 @@ impl WebTransportTask {
                 }
                 let writer = stream.get_writer().map_err(|e| anyhow!("{:?}", e))?;
                 let data = Uint8Array::from(data.as_slice());
-                JsFuture::from(writer.ready()).await.map_err(|e| anyhow!("{:?}", e))?;
-                JsFuture::from(writer.write_with_chunk(&data)).await.map_err(|e| anyhow!("{:?}", e))?;
+                JsFuture::from(writer.ready())
+                    .await
+                    .map_err(|e| anyhow!("{:?}", e))?;
+                JsFuture::from(writer.write_with_chunk(&data))
+                    .await
+                    .map_err(|e| anyhow!("{:?}", e))?;
                 writer.release_lock();
                 Ok(())
             }
@@ -355,7 +359,9 @@ impl WebTransportTask {
                     stream.map_err(|e| anyhow!("{:?}", e))?.unchecked_into();
                 let writer = stream.get_writer().map_err(|e| anyhow!("{:?}", e))?;
                 let data = Uint8Array::from(data.as_slice());
-                JsFuture::from(writer.ready()).await.map_err(|e| anyhow!("{:?}", e))?;
+                JsFuture::from(writer.ready())
+                    .await
+                    .map_err(|e| anyhow!("{:?}", e))?;
                 let _ = JsFuture::from(writer.write_with_chunk(&data))
                     .await
                     .map_err(|e| anyhow::anyhow!("{:?}", e))?;
@@ -423,7 +429,9 @@ impl WebTransportTask {
                     .get_writer()
                     .map_err(|e| anyhow!("{:?}", e))?;
 
-                JsFuture::from(writer.ready()).await.map_err(|e| anyhow!("{:?}", e))?;
+                JsFuture::from(writer.ready())
+                    .await
+                    .map_err(|e| anyhow!("{:?}", e))?;
                 let data = Uint8Array::from(data.as_slice());
                 let _ = JsFuture::from(writer.write_with_chunk(&data))
                     .await
