@@ -28,7 +28,7 @@ use anyhow::{anyhow, Error};
 use std::{fmt, rc::Rc};
 use thiserror::Error as ThisError;
 use wasm_bindgen_futures::JsFuture;
-use yew::callback::Callback;
+use yew::callback::{self, Callback};
 use yew::platform::pinned::oneshot::channel;
 
 use gloo_console::log;
@@ -93,6 +93,8 @@ pub struct WebTransportTask {
     notification: Callback<WebTransportStatus>,
     #[allow(dead_code)]
     listeners: [Promise; 2],
+    #[allow(dead_code)]
+    callbacks: [Closure<dyn FnMut(JsValue)>; 2],
 }
 
 impl WebTransportTask {
@@ -100,11 +102,13 @@ impl WebTransportTask {
         transport: Rc<WebTransport>,
         notification: Callback<WebTransportStatus>,
         listeners: [Promise; 2],
+        callbacks: [Closure<dyn FnMut(JsValue)>; 2],
     ) -> WebTransportTask {
         WebTransportTask {
             transport,
             notification,
             listeners,
+            callbacks,
         }
     }
 }
@@ -129,7 +133,8 @@ impl WebTransportService {
         on_bidirectional_stream: Callback<WebTransportBidirectionalStream>,
         notification: Callback<WebTransportStatus>,
     ) -> Result<WebTransportTask, WebTransportError> {
-        let ConnectCommon(transport, listeners) = Self::connect_common(url, &notification)?;
+        let ConnectCommon(transport, listeners, callbacks) =
+            Self::connect_common(url, &notification)?;
         let transport = Rc::new(transport);
 
         Self::start_listening_incoming_datagrams(
@@ -149,7 +154,12 @@ impl WebTransportService {
             on_bidirectional_stream,
         );
 
-        Ok(WebTransportTask::new(transport, notification, listeners))
+        Ok(WebTransportTask::new(
+            transport,
+            notification,
+            listeners,
+            callbacks,
+        ))
     }
 
     fn start_listening_incoming_unidirectional_streams(
@@ -288,17 +298,19 @@ impl WebTransportService {
             .ready()
             .then(&opened_closure)
             .catch(&closed_closure);
-        opened_closure.forget();
-        let closed = transport.closed().then(&closed_closure);
-        closed_closure.forget();
+        let closed = transport
+            .closed()
+            .then(&closed_closure)
+            .catch(&closed_closure);
 
         {
             let listeners = [ready, closed];
-            Ok(ConnectCommon(transport, listeners))
+            let callbacks = [opened_closure, closed_closure];
+            Ok(ConnectCommon(transport, listeners, callbacks))
         }
     }
 }
-struct ConnectCommon(WebTransport, [Promise; 2]);
+struct ConnectCommon(WebTransport, [Promise; 2], [Closure<dyn FnMut(JsValue)>; 2]);
 
 pub fn process_binary(bytes: &Uint8Array, callback: &Callback<Vec<u8>>) {
     let data = bytes.to_vec();
