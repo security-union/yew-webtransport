@@ -322,23 +322,25 @@ impl WebTransportTask {
     pub fn send_datagram(transport: Rc<WebTransport>, data: Vec<u8>) {
         wasm_bindgen_futures::spawn_local(async move {
             let transport = transport.clone();
-            let transport_2 = transport.clone();
-            let result: Result<(), anyhow::Error> = async move {
-                let stream = transport.datagrams();
-                let stream: WritableStream = stream.writable();
-                let writer = stream.get_writer().map_err(|e| anyhow!("{:?}", e))?;
-                let data = Uint8Array::from(data.as_slice());
-                let _stream = JsFuture::from(writer.write_with_chunk(&data))
-                    .await
-                    .map_err(|e| anyhow::anyhow!("{:?}", e))?;
-                writer.release_lock();
-                Ok(())
+            let result: Result<(), anyhow::Error> = {
+                let transport = transport.clone();
+                async move {
+                    let stream = transport.datagrams();
+                    let stream: WritableStream = stream.writable();
+                    let writer = stream.get_writer().map_err(|e| anyhow!("{:?}", e))?;
+                    let data = Uint8Array::from(data.as_slice());
+                    let _stream = JsFuture::from(writer.write_with_chunk(&data))
+                        .await
+                        .map_err(|e| anyhow::anyhow!("{:?}", e))?;
+                    writer.release_lock();
+                    Ok(())
+                }
             }
             .await;
             if let Err(e) = result {
                 let e = e.to_string();
-                log!("error: {}", e);
-                transport_2.close();
+                log!("error: ", e);
+                transport.close();
             }
         });
     }
@@ -346,27 +348,29 @@ impl WebTransportTask {
     pub fn send_unidirectional_stream(transport: Rc<WebTransport>, data: Vec<u8>) {
         wasm_bindgen_futures::spawn_local(async move {
             let transport = transport.clone();
-            let transport_2 = transport.clone();
-            let result: Result<(), anyhow::Error> = async move {
-                let stream = JsFuture::from(transport.create_unidirectional_stream()).await;
-                let stream: WritableStream =
-                    stream.map_err(|e| anyhow!("{:?}", e))?.unchecked_into();
-                let writer = stream.get_writer().map_err(|e| anyhow!("{:?}", e))?;
-                let data = Uint8Array::from(data.as_slice());
-                let _ = JsFuture::from(writer.write_with_chunk(&data))
-                    .await
-                    .map_err(|e| anyhow::anyhow!("{:?}", e))?;
-                writer.release_lock();
-                JsFuture::from(stream.close())
-                    .await
-                    .map_err(|e| anyhow::anyhow!("{:?}", e))?;
-                Ok(())
+            let result: Result<(), anyhow::Error> = {
+                let transport = transport.clone();
+                async move {
+                    let stream = JsFuture::from(transport.create_unidirectional_stream()).await;
+                    let stream: WritableStream =
+                        stream.map_err(|e| anyhow!("open sream error{:?}", e))?.unchecked_into();
+                    let writer = stream.get_writer().map_err(|e| anyhow!("get writer {:?}", e))?;
+                    let data = Uint8Array::from(data.as_slice());
+                    let _ = JsFuture::from(writer.write_with_chunk(&data))
+                        .await
+                        .map_err(|e| anyhow::anyhow!("{:?}", e))?;
+                    writer.release_lock();
+                    JsFuture::from(stream.close())
+                        .await
+                        .map_err(|e| anyhow::anyhow!("{:?}", e))?;
+                    Ok(())
+                }
             }
             .await;
             if let Err(e) = result {
                 let e = e.to_string();
                 log!("error: {}", e);
-                transport_2.close();
+                transport.close();
             }
         });
     }
