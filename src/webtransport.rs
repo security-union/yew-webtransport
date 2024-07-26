@@ -93,8 +93,6 @@ pub struct WebTransportTask {
     notification: Callback<WebTransportStatus>,
     #[allow(dead_code)]
     listeners: [Promise; 2],
-    #[allow(dead_code)]
-    callbacks: [Closure<dyn FnMut(JsValue)>; 2],
 }
 
 impl WebTransportTask {
@@ -102,13 +100,11 @@ impl WebTransportTask {
         transport: Rc<WebTransport>,
         notification: Callback<WebTransportStatus>,
         listeners: [Promise; 2],
-        callbacks: [Closure<dyn FnMut(JsValue)>; 2],
     ) -> WebTransportTask {
         WebTransportTask {
             transport,
             notification,
             listeners,
-            callbacks,
         }
     }
 }
@@ -133,7 +129,7 @@ impl WebTransportService {
         on_bidirectional_stream: Callback<WebTransportBidirectionalStream>,
         notification: Callback<WebTransportStatus>,
     ) -> Result<WebTransportTask, WebTransportError> {
-        let ConnectCommon(transport, listeners, callbacks) =
+        let ConnectCommon(transport, listeners) =
             Self::connect_common(url, &notification)?;
         let transport = Rc::new(transport);
 
@@ -158,7 +154,6 @@ impl WebTransportService {
             transport,
             notification,
             listeners,
-            callbacks,
         ))
     }
 
@@ -306,15 +301,17 @@ impl WebTransportService {
             .closed()
             .then(&closed_closure)
             .catch(&closed_closure);
-
+        // forget closures
+        opened_closure.forget();
+        closed_closure.forget();
+        
         {
             let listeners = [ready, closed];
-            let callbacks = [opened_closure, closed_closure];
-            Ok(ConnectCommon(transport, listeners, callbacks))
+            Ok(ConnectCommon(transport, listeners))
         }
     }
 }
-struct ConnectCommon(WebTransport, [Promise; 2], [Closure<dyn FnMut(JsValue)>; 2]);
+struct ConnectCommon(WebTransport, [Promise; 2]);
 
 pub fn process_binary(bytes: &Uint8Array, callback: &Callback<Vec<u8>>) {
     let data = bytes.to_vec();
