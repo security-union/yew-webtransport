@@ -362,26 +362,26 @@ impl WebTransportTask {
                         .map_err(|e| anyhow!("{:?}", e))?;
                     let stream = JsFuture::from(transport.create_unidirectional_stream()).await;
                     let stream: WritableStream =
-                        stream.map_err(|e| anyhow!("{:?}", e))?.unchecked_into();
-                    let writer = stream.get_writer().map_err(|e| anyhow!("{:?}", e))?;
+                        stream.map_err(|e| anyhow!("failed to create Writeable stream {:?}", e))?.unchecked_into();
+                    let writer = stream.get_writer().map_err(|e| anyhow!("Error getting writer {:?}", e))?;
                     let data = Uint8Array::from(data.as_slice());
                     JsFuture::from(writer.ready())
                         .await
-                        .map_err(|e| anyhow!("{:?}", e))?;
+                        .map_err(|e| anyhow!("Error getting writer ready {:?}", e))?;
                     let _ = JsFuture::from(writer.write_with_chunk(&data))
                         .await
-                        .map_err(|e| anyhow::anyhow!("{:?}", e))?;
+                        .map_err(|e| anyhow::anyhow!("Error writing to stream: {:?}", e))?;
                     writer.release_lock();
                     JsFuture::from(stream.close())
                         .await
-                        .map_err(|e| anyhow::anyhow!("{:?}", e))?;
+                        .map_err(|e| anyhow::anyhow!("Error closing stream {:?}", e))?;
                     Ok(())
                 }
             }
             .await;
             if let Err(e) = result {
                 let e = e.to_string();
-                log!("error: {}", e);
+                log!("error: ", e);
                 transport.close();
             }
         });
