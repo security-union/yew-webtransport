@@ -322,29 +322,31 @@ impl WebTransportTask {
     pub fn send_datagram(transport: Rc<WebTransport>, data: Vec<u8>) {
         wasm_bindgen_futures::spawn_local(async move {
             let transport = transport.clone();
-            let transport_2 = transport.clone();
-            let result: Result<(), anyhow::Error> = async move {
-                let stream = transport.datagrams();
-                let stream: WritableStream = stream.writable();
-                if stream.locked() {
-                    return Err(anyhow::anyhow!("Stream is locked"));
+            let result: Result<(), anyhow::Error> = {
+                let transport = transport.clone();
+                async move {
+                    let stream = transport.datagrams();
+                    let stream: WritableStream = stream.writable();
+                    if stream.locked() {
+                        return Err(anyhow::anyhow!("Stream is locked"));
+                    }
+                    let writer = stream.get_writer().map_err(|e| anyhow!("{:?}", e))?;
+                    let data = Uint8Array::from(data.as_slice());
+                    JsFuture::from(writer.ready())
+                        .await
+                        .map_err(|e| anyhow!("{:?}", e))?;
+                    JsFuture::from(writer.write_with_chunk(&data))
+                        .await
+                        .map_err(|e| anyhow!("{:?}", e))?;
+                    writer.release_lock();
+                    Ok(())
                 }
-                let writer = stream.get_writer().map_err(|e| anyhow!("{:?}", e))?;
-                let data = Uint8Array::from(data.as_slice());
-                JsFuture::from(writer.ready())
-                    .await
-                    .map_err(|e| anyhow!("{:?}", e))?;
-                JsFuture::from(writer.write_with_chunk(&data))
-                    .await
-                    .map_err(|e| anyhow!("{:?}", e))?;
-                writer.release_lock();
-                Ok(())
             }
             .await;
             if let Err(e) = result {
                 let e = e.to_string();
                 log!("error: ", e);
-                transport_2.close();
+                transport.close();
             }
         });
     }
@@ -352,30 +354,32 @@ impl WebTransportTask {
     pub fn send_unidirectional_stream(transport: Rc<WebTransport>, data: Vec<u8>) {
         wasm_bindgen_futures::spawn_local(async move {
             let transport = transport.clone();
-            let transport_2 = transport.clone();
-            let result: Result<(), anyhow::Error> = async move {
-                let stream = JsFuture::from(transport.create_unidirectional_stream()).await;
-                let stream: WritableStream =
-                    stream.map_err(|e| anyhow!("{:?}", e))?.unchecked_into();
-                let writer = stream.get_writer().map_err(|e| anyhow!("{:?}", e))?;
-                let data = Uint8Array::from(data.as_slice());
-                JsFuture::from(writer.ready())
-                    .await
-                    .map_err(|e| anyhow!("{:?}", e))?;
-                let _ = JsFuture::from(writer.write_with_chunk(&data))
-                    .await
-                    .map_err(|e| anyhow::anyhow!("{:?}", e))?;
-                writer.release_lock();
-                JsFuture::from(stream.close())
-                    .await
-                    .map_err(|e| anyhow::anyhow!("{:?}", e))?;
-                Ok(())
+            let result: Result<(), anyhow::Error> = {
+                let transport = transport.clone();
+                async move {
+                    let stream = JsFuture::from(transport.create_unidirectional_stream()).await;
+                    let stream: WritableStream =
+                        stream.map_err(|e| anyhow!("{:?}", e))?.unchecked_into();
+                    let writer = stream.get_writer().map_err(|e| anyhow!("{:?}", e))?;
+                    let data = Uint8Array::from(data.as_slice());
+                    JsFuture::from(writer.ready())
+                        .await
+                        .map_err(|e| anyhow!("{:?}", e))?;
+                    let _ = JsFuture::from(writer.write_with_chunk(&data))
+                        .await
+                        .map_err(|e| anyhow::anyhow!("{:?}", e))?;
+                    writer.release_lock();
+                    JsFuture::from(stream.close())
+                        .await
+                        .map_err(|e| anyhow::anyhow!("{:?}", e))?;
+                    Ok(())
+                }
             }
             .await;
             if let Err(e) = result {
                 let e = e.to_string();
                 log!("error: {}", e);
-                transport_2.close();
+                transport.close();
             }
         });
     }
@@ -387,68 +391,68 @@ impl WebTransportTask {
     ) {
         wasm_bindgen_futures::spawn_local(async move {
             let transport = transport.clone();
-            let transport_2 = transport.clone();
-            let result: Result<(), anyhow::Error> = async move {
-                let stream = JsFuture::from(transport.create_bidirectional_stream()).await;
-                let stream: WebTransportBidirectionalStream =
-                    stream.map_err(|e| anyhow!("{:?}", e))?.unchecked_into();
-                let readable: ReadableStreamDefaultReader =
-                    stream.readable().get_reader().unchecked_into();
-                let (sender, receiver) = channel();
-                wasm_bindgen_futures::spawn_local(async move {
-                    loop {
-                        let read_result = JsFuture::from(readable.read()).await;
-                        match read_result {
-                            Err(e) => {
-                                let mut reason = WebTransportCloseInfo::default();
-                                reason.reason(
-                                    format!("Failed to read incoming stream {e:?}").as_str(),
-                                );
-                                transport.close_with_close_info(&reason);
-                                break;
-                            }
-                            Ok(result) => {
-                                let done = Reflect::get(&result, &JsString::from("done"))
-                                    .unwrap()
-                                    .unchecked_into::<Boolean>();
-                                if done.is_truthy() {
+            let result: Result<(), anyhow::Error> = {
+                let transport = transport.clone();
+                async move {
+                    let stream = JsFuture::from(transport.create_bidirectional_stream()).await;
+                    let stream: WebTransportBidirectionalStream =
+                        stream.map_err(|e| anyhow!("{:?}", e))?.unchecked_into();
+                    let readable: ReadableStreamDefaultReader =
+                        stream.readable().get_reader().unchecked_into();
+                    let (sender, receiver) = channel();
+                    wasm_bindgen_futures::spawn_local(async move {
+                        loop {
+                            let read_result = JsFuture::from(readable.read()).await;
+                            match read_result {
+                                Err(e) => {
+                                    let mut reason = WebTransportCloseInfo::default();
+                                    reason.reason(
+                                        format!("Failed to read incoming stream {e:?}").as_str(),
+                                    );
+                                    transport.close_with_close_info(&reason);
                                     break;
                                 }
-                                let value: Uint8Array =
-                                    Reflect::get(&result, &JsString::from("value"))
+                                Ok(result) => {
+                                    let done = Reflect::get(&result, &JsString::from("done"))
                                         .unwrap()
-                                        .unchecked_into();
-                                process_binary(&value, &callback);
+                                        .unchecked_into::<Boolean>();
+                                    if done.is_truthy() {
+                                        break;
+                                    }
+                                    let value: Uint8Array =
+                                        Reflect::get(&result, &JsString::from("value"))
+                                            .unwrap()
+                                            .unchecked_into();
+                                    process_binary(&value, &callback);
+                                }
                             }
                         }
-                    }
-                    sender.send(true).unwrap();
-                });
-                let writer = stream
-                    .writable()
-                    .get_writer()
-                    .map_err(|e| anyhow!("{:?}", e))?;
+                        sender.send(true).unwrap();
+                    });
+                    let writer = stream
+                        .writable()
+                        .get_writer()
+                        .map_err(|e| anyhow!("{:?}", e))?;
 
-                JsFuture::from(writer.ready())
-                    .await
-                    .map_err(|e| anyhow!("{:?}", e))?;
-                let data = Uint8Array::from(data.as_slice());
-                let _ = JsFuture::from(writer.write_with_chunk(&data))
-                    .await
-                    .map_err(|e| anyhow::anyhow!("{:?}", e))?;
-                JsFuture::from(writer.close())
-                    .await
-                    .map_err(|e| anyhow::anyhow!("{:?}", e))?;
-
-                let _ = receiver.await;
-
-                Ok(())
+                    JsFuture::from(writer.ready())
+                        .await
+                        .map_err(|e| anyhow!("{:?}", e))?;
+                    let data = Uint8Array::from(data.as_slice());
+                    let _ = JsFuture::from(writer.write_with_chunk(&data))
+                        .await
+                        .map_err(|e| anyhow::anyhow!("{:?}", e))?;
+                    JsFuture::from(writer.close())
+                        .await
+                        .map_err(|e| anyhow::anyhow!("{:?}", e))?;
+                    let _ = receiver.await?;
+                    Ok(())
+                }
             }
             .await;
             if let Err(e) = result {
                 let e = e.to_string();
                 log!("error: {}", e);
-                transport_2.close();
+                transport.close();
             }
         });
     }
