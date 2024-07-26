@@ -357,6 +357,9 @@ impl WebTransportTask {
             let result: Result<(), anyhow::Error> = {
                 let transport = transport.clone();
                 async move {
+                    let _ = JsFuture::from(transport.ready())
+                        .await
+                        .map_err(|e| anyhow!("{:?}", e))?;
                     let stream = JsFuture::from(transport.create_unidirectional_stream()).await;
                     let stream: WritableStream =
                         stream.map_err(|e| anyhow!("{:?}", e))?.unchecked_into();
