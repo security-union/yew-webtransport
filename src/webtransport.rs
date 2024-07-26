@@ -382,7 +382,7 @@ impl WebTransportTask {
             if let Err(e) = result {
                 let e = e.to_string();
                 log!("error: ", e);
-                transport.close();
+                // transport.close();
             }
         });
     }
