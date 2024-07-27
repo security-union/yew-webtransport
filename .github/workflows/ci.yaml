@@ -13,7 +13,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      - uses: dtolnay/rust-toolchain@1.70
+      - uses: dtolnay/rust-toolchain@1.73
         with:
           components: clippy, rustfmt
       - run: RUSTFLAGS=--cfg=web_sys_unstable_apis  cargo clippy -- --deny warnings

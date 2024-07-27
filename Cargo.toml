@@ -1,6 +1,6 @@
 [package]
 name = "yew-webtransport"
-version = "0.21.0"
+version = "0.21.1"
 edition = "2021"
 repository = "https://github.com/security-union/yew-webtransport.git"
 description = "WebTransport is an API offering low-latency, bidirectional, client-server messaging."
