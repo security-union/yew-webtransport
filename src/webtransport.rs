@@ -129,8 +129,7 @@ impl WebTransportService {
         on_bidirectional_stream: Callback<WebTransportBidirectionalStream>,
         notification: Callback<WebTransportStatus>,
     ) -> Result<WebTransportTask, WebTransportError> {
-        let ConnectCommon(transport, listeners) =
-            Self::connect_common(url, &notification)?;
+        let ConnectCommon(transport, listeners) = Self::connect_common(url, &notification)?;
         let transport = Rc::new(transport);
 
         Self::start_listening_incoming_datagrams(
@@ -150,11 +149,7 @@ impl WebTransportService {
             on_bidirectional_stream,
         );
 
-        Ok(WebTransportTask::new(
-            transport,
-            notification,
-            listeners,
-        ))
+        Ok(WebTransportTask::new(transport, notification, listeners))
     }
 
     fn start_listening_incoming_unidirectional_streams(
@@ -304,7 +299,7 @@ impl WebTransportService {
         // forget closures
         opened_closure.forget();
         closed_closure.forget();
-        
+
         {
             let listeners = [ready, closed];
             Ok(ConnectCommon(transport, listeners))
@@ -362,9 +357,12 @@ impl WebTransportTask {
                         .await
                         .map_err(|e| anyhow!("{:?}", e))?;
                     let stream = JsFuture::from(transport.create_unidirectional_stream()).await;
-                    let stream: WritableStream =
-                        stream.map_err(|e| anyhow!("failed to create Writeable stream {:?}", e))?.unchecked_into();
-                    let writer = stream.get_writer().map_err(|e| anyhow!("Error getting writer {:?}", e))?;
+                    let stream: WritableStream = stream
+                        .map_err(|e| anyhow!("failed to create Writeable stream {:?}", e))?
+                        .unchecked_into();
+                    let writer = stream
+                        .get_writer()
+                        .map_err(|e| anyhow!("Error getting writer {:?}", e))?;
                     let data = Uint8Array::from(data.as_slice());
                     JsFuture::from(writer.ready())
                         .await
