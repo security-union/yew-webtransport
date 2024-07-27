@@ -278,15 +278,11 @@ impl WebTransportService {
         let notify = notification.clone();
 
         let opened_closure = Closure::wrap(Box::new(move |_| {
-            log!("WebTransport connection opened");
             notify.emit(WebTransportStatus::Opened);
-            log!("after emit");
         }) as Box<dyn FnMut(JsValue)>);
         let notify = notification.clone();
         let closed_closure = Closure::wrap(Box::new(move |e: JsValue| {
-            log!("WebTransport connection closed");
             notify.emit(WebTransportStatus::Closed(e));
-            log!("after emit");
         }) as Box<dyn FnMut(JsValue)>);
         let ready = transport
             .ready()
@@ -296,7 +292,7 @@ impl WebTransportService {
             .closed()
             .then(&closed_closure)
             .catch(&closed_closure);
-        // forget closures
+        // forget closures, this is a minor leak but it prevents weird issues downstream
         opened_closure.forget();
         closed_closure.forget();
 
