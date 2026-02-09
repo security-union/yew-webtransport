@@ -1,28 +1,29 @@
 [package]
 name = "yew-webtransport"
-version = "0.21.1"
+version = "0.22.0"
 edition = "2021"
 repository = "https://github.com/security-union/yew-webtransport.git"
 description = "WebTransport is an API offering low-latency, bidirectional, client-server messaging."
 license = "MIT"
+publish = true
+rust-version = "1.84.0"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-yew = "0.21.0"
-wasm-bindgen-futures = "0.4.34"
-wasm-bindgen = "0.2.87"
-futures = "0.3.24"
-futures-util = "0.3.24"
-js-sys = { version = "0.3.64", optional = false }
-thiserror = "1.0"
+yew = "0.22.0"
+wasm-bindgen-futures = "0.4"
+wasm-bindgen = "0.2"
+futures = "0.3"
+futures-util = "0.3"
+js-sys = "0.3"
+thiserror = "2.0"
 anyhow = "1"
 serde = "1"
 serde_derive = "1"
 serde_json = "1.0"
-gloo = { version = "0.2.1", optional = false }
-gloo-console = "0.2.1"
-web-sys = {version = "0.3.64", features = [ "WebSocket", "WebTransport", "WritableStream", "ReadableStream", "ReadableStreamDefaultReader", "ReadableStreamReadResult", "WebTransportSendStream", "WritableStreamDefaultWriter", "WebTransportDatagramDuplexStream", "WebTransportCloseInfo", "WebTransportBidirectionalStream", "WebTransportReceiveStream"]}
+gloo-console = "0.3"
+web-sys = {version = "0.3.70", features = [ "WebSocket", "WebTransport", "WritableStream", "ReadableStream", "ReadableStreamDefaultReader", "ReadableStreamReadResult", "WebTransportSendStream", "WritableStreamDefaultWriter", "WebTransportDatagramDuplexStream", "WebTransportCloseInfo", "WebTransportBidirectionalStream", "WebTransportReceiveStream"]}
 
 [package.metadata.docs.rs]
 rustc-args = ["--cfg", "web_sys_unstable_apis"]

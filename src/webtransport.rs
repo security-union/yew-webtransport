@@ -165,8 +165,8 @@ impl WebTransportService {
                 match read_result {
                     Err(e) => {
                         log!("Failed to read incoming unidirectional streams", &e);
-                        let mut reason = WebTransportCloseInfo::default();
-                        reason.reason(
+                        let reason = WebTransportCloseInfo::default();
+                        reason.set_reason(
                             format!("Failed to read incoming unidirectional streams {e:?}")
                                 .as_str(),
                         );
@@ -205,8 +205,10 @@ impl WebTransportService {
                 let read_result = JsFuture::from(incoming_datagrams.read()).await;
                 match read_result {
                     Err(e) => {
-                        let mut reason = WebTransportCloseInfo::default();
-                        reason.reason(format!("Failed to read incoming datagrams {e:?}").as_str());
+                        let reason = WebTransportCloseInfo::default();
+                        reason.set_reason(
+                            format!("Failed to read incoming datagrams {e:?}").as_str(),
+                        );
                         transport.close_with_close_info(&reason);
                         break;
                     }
@@ -238,8 +240,8 @@ impl WebTransportService {
                 let read_result = JsFuture::from(read_result.read()).await;
                 match read_result {
                     Err(e) => {
-                        let mut reason = WebTransportCloseInfo::default();
-                        reason.reason(
+                        let reason = WebTransportCloseInfo::default();
+                        reason.set_reason(
                             format!("Failed to read incoming unidirectional streams {e:?}")
                                 .as_str(),
                         );
@@ -403,8 +405,8 @@ impl WebTransportTask {
                             let read_result = JsFuture::from(readable.read()).await;
                             match read_result {
                                 Err(e) => {
-                                    let mut reason = WebTransportCloseInfo::default();
-                                    reason.reason(
+                                    let reason = WebTransportCloseInfo::default();
+                                    reason.set_reason(
                                         format!("Failed to read incoming stream {e:?}").as_str(),
                                     );
                                     transport.close_with_close_info(&reason);
