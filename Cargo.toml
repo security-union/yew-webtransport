@@ -5,6 +5,7 @@ edition = "2021"
 repository = "https://github.com/security-union/yew-webtransport.git"
 description = "WebTransport is an API offering low-latency, bidirectional, client-server messaging."
 license = "MIT"
+publish = true
 rust-version = "1.84.0"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
