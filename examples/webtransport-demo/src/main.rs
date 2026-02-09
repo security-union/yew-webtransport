@@ -209,8 +209,8 @@ impl Component for Model {
                         let read_result = JsFuture::from(readable.read()).await;
                         match read_result {
                             Err(e) => {
-                                let mut reason = WebTransportCloseInfo::default();
-                                reason.reason(
+                                let reason = WebTransportCloseInfo::default();
+                                reason.set_reason(
                                     format!("Failed to read incoming datagrams {e:?}").as_str(),
                                 );
                                 break;
@@ -246,8 +246,8 @@ impl Component for Model {
                         let read_result = JsFuture::from(incoming_datagrams.read()).await;
                         match read_result {
                             Err(e) => {
-                                let mut reason = WebTransportCloseInfo::default();
-                                reason.reason(
+                                let reason = WebTransportCloseInfo::default();
+                                reason.set_reason(
                                     format!("Failed to read incoming datagrams {e:?}").as_str(),
                                 );
                                 break;
@@ -315,7 +315,7 @@ impl Component for Model {
                                 let input = e.target_dyn_into::<HtmlTextAreaElement>().unwrap();
                                 let text = input.value();
                                 WsAction::SetText(text)
-                            })} name="data" id="data" disabled={self.transport.is_none()}></textarea>
+                            })} name="data" id="data" disabled={self.transport.is_none()} />
                             <div>
                                 <input type="radio" name="sendtype" id="datagram" onchange={ctx.link().callback(|e: Event|{
                                     let input = e.target_dyn_into::<HtmlInputElement>().unwrap();
